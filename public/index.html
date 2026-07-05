@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sens Finder — Aim Sensitivity Tool</title>
+<meta name="description" content="Find your optimal mouse sensitivity for VALORANT & FPS games through data-driven aim trials — flick, tracking, and switching tests.">
+<meta property="og:title" content="Sens Finder — Aim Sensitivity Tool">
+<meta property="og:description" content="Find your optimal mouse sensitivity through data-driven aim trials.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0d11">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0d11'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23e8a33d' font-family='monospace' font-weight='bold'>S</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  #sf-loader {
+    position: fixed; inset: 0; z-index: 999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    background: #0a0d11; color: #e6e9ee; font-family: 'Consolas', 'SFMono-Regular', 'Courier New', monospace;
+    transition: opacity .4s, visibility .4s;
+  }
+  #sf-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  #sf-loader .spinner {
+    width: 32px; height: 32px; border: 2px solid #232a34; border-top-color: #e8a33d;
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #sf-loader .brand { font-size: 18px; font-weight: 700; letter-spacing: 3px; color: #e8a33d; text-transform: uppercase; }
+  #sf-loader .status { font-size: 12px; color: #7c8797; }
+
+  #sf-root {
+    --bg: #0a0d11;
+    --panel: #12161c;
+    --panel-2: #171c24;
+    --line: #232a34;
+    --text: #e6e9ee;
+    --muted: #7c8797;
+    --accent: #e8a33d;
+    --accent-2: #45d6c4;
+    --danger: #ff5d5d;
+    --mono: 'Consolas', 'SFMono-Regular', 'Courier New', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+  }
+  #sf-root * { box-sizing: border-box; }
+  #sf-scanline {
+    position: absolute; inset: 0; pointer-events: none; z-index: 50;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    mix-blend-mode: overlay;
+  }
+  .sf-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #10141a, #0d1116);
+  }
+  .sf-brand { font-family: var(--mono); font-weight: 700; letter-spacing: 2px; font-size: 13px; color: var(--accent); text-transform: uppercase; }
+  .sf-brand span { color: var(--muted); font-weight: 400; }
+  .sf-step-track { display: flex; gap: 6px; align-items: center; }
+  .sf-step-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: background .3s; }
+  .sf-step-dot.active { background: var(--accent); }
+  .sf-step-dot.done { background: var(--accent-2); }
+
+  .sf-body { flex: 1; padding: 26px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+
+  .sf-title { font-size: 20px; font-weight: 700; letter-spacing: .3px; }
+  .sf-sub { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+  .sf-field { display: flex; flex-direction: column; gap: 6px; }
+  .sf-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); font-family: var(--mono); }
+  .sf-input {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    padding: 10px 12px; border-radius: 8px; font-family: var(--mono); font-size: 14px; outline: none;
+  }
+  .sf-input:focus { border-color: var(--accent); }
+  .sf-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .sf-radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sf-radio {
+    border: 1px solid var(--line); background: var(--panel-2); padding: 12px 14px; border-radius: 10px;
+    cursor: pointer; flex: 1; min-width: 150px; transition: all .15s;
+  }
+  .sf-radio.selected { border-color: var(--accent); background: rgba(232,163,61,0.08); }
+  .sf-radio-title { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+  .sf-radio-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+
+  .sf-btn {
+    background: var(--accent); color: #1a1305; border: none; padding: 12px 22px; border-radius: 8px;
+    font-weight: 700; font-size: 13.5px; cursor: pointer; letter-spacing: .3px; font-family: var(--sans);
+    transition: transform .1s, filter .15s;
+  }
+  .sf-btn:hover { filter: brightness(1.08); }
+  .sf-btn:active { transform: scale(0.98); }
+  .sf-btn.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .sf-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .sf-btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: auto; padding-top: 10px; }
+
+  .sf-error { color: var(--danger); font-size: 12px; }
+
+  .sf-trial-hud { display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .sf-trial-hud b { color: var(--text); }
+  .sf-canvas-wrap { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #05070a; }
+  .sf-canvas-wrap canvas { display: block; width: 100%; height: auto; cursor: none; }
+  .sf-overlay {
+    position: absolute; inset: 0; background: rgba(5,7,10,0.88); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 20px;
+  }
+  .sf-overlay h3 { font-size: 16px; margin: 0; }
+  .sf-overlay p { color: var(--muted); font-size: 12.5px; max-width: 340px; line-height: 1.6; margin: 0; }
+  .sf-pill { font-family: var(--mono); font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); padding: 4px 10px; border-radius: 100px; color: var(--accent-2); }
+
+  .sf-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  .sf-table th, .sf-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+  .sf-table th { color: var(--muted); font-weight: 500; text-transform: uppercase; font-size: 10.5px; letter-spacing: .8px; }
+  .sf-table tr.best { background: rgba(69,214,196,0.06); }
+  .sf-table tr.best td:first-child { color: var(--accent-2); font-weight: 700; }
+
+  .sf-recommend {
+    border: 1px solid var(--accent); background: rgba(232,163,61,0.06); border-radius: 12px; padding: 18px 20px;
+  }
+  .sf-recommend .sf-label { color: var(--accent); }
+  .sf-recommend-value { font-family: var(--mono); font-size: 28px; font-weight: 700; margin: 4px 0; }
+  .sf-recommend-sub { font-size: 12.5px; color: var(--muted); }
+
+  .sf-warn { border: 1px solid #6b5420; background: rgba(232,163,61,0.06); padding: 10px 14px; border-radius: 8px; font-size: 12px; color: var(--accent); }
+
+  .sf-bars { display: flex; flex-direction: column; gap: 10px; }
+  .sf-bar-row { display: flex; align-items: center; gap: 10px; }
+  .sf-bar-label { font-family: var(--mono); font-size: 11.5px; width: 90px; color: var(--muted); flex-shrink: 0; }
+  .sf-bar-track { flex: 1; height: 16px; background: var(--panel-2); border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+  .sf-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+  .sf-bar-val { font-family: var(--mono); font-size: 11.5px; width: 42px; text-align: right; flex-shrink: 0; }
+
+  .sf-disclaimer { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; line-height: 1.6; }
+
+  .sf-unsupported {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 30px;
+    background: var(--bg); z-index: 10;
+  }
+  .sf-unsupported h3 { font-size: 18px; font-weight: 700; }
+  .sf-unsupported p { color: var(--muted); font-size: 13px; max-width: 380px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div id="sf-loader" role="status" aria-label="Loading">
+  <div class="spinner"></div>
+  <div class="brand">Sens Finder</div>
+  <div class="status">Initializing aim lab…</div>
+</div>
+
+<div id="sf-root" hidden>
+  <div id="sf-scanline" aria-hidden="true"></div>
+  <div class="sf-header">
+    <div class="sf-brand">SENS://FINDER <span>v1</span></div>
+    <div class="sf-step-track" id="sf-steps" role="progressbar" aria-valuemin="0" aria-valuemax="2" aria-valuenow="0"></div>
+  </div>
+  <div class="sf-body" id="sf-body" role="main"></div>
+</div>
+
+<script>
+(function(){
+  const root = document.getElementById('sf-root');
+  const loader = document.getElementById('sf-loader');
+  const body = document.getElementById('sf-body');
+  const stepsEl = document.getElementById('sf-steps');
+
+  const hasCanvas = (function(){
+    var c = document.createElement('canvas');
+    return !!(c.getContext && c.getContext('2d'));
+  })();
+
+  const TASK_NAMES = ['flick','tracking','switching'];
+  const TASK_LABELS = { flick: 'Flick', tracking: 'Tracking', switching: 'Switching' };
+
+  const state = {
+    dpi: 800,
+    baseSens: 0.4,
+    sensList: [],
+    playstyle: 'balanced',
+    screen: 'setup',
+    trialSensIndex: 0,
+    trialTaskIndex: 0,
+    results: {},
+  };
+  const SENS_MULTIPLIERS = [0.5, 0.75, 1, 1.25, 1.5];
+
+  const PLAYSTYLES = {
+    aggressive: { label: 'Duelist / Agresif', desc: 'Prioritas flick cepat & duel jarak dekat-menengah.', weights: { flick: .45, switching: .30, tracking: .25 } },
+    balanced:   { label: 'Balanced / Fleksibel', desc: 'Seimbang antara flick, switching, dan tracking.', weights: { flick: .34, switching: .33, tracking: .33 } },
+    control:    { label: 'Sentinel / Controller', desc: 'Prioritas kontrol halus & hold angle.', weights: { flick: .25, switching: .25, tracking: .50 } },
+  };
+
+  function renderSteps(){
+    const order = ['setup','trial','results'];
+    const idx = order.indexOf(state.screen);
+    stepsEl.innerHTML = order.map((s, i) => {
+      const cls = i === idx ? 'active' : (i < idx ? 'done' : '');
+      return '<div class="sf-step-dot ' + cls + '"></div>';
+    }).join('');
+    stepsEl.setAttribute('aria-valuenow', Math.max(0, idx));
+  }
+
+  function go(screen){
+    state.screen = screen;
+    renderSteps();
+    if (screen === 'setup') renderSetup();
+    if (screen === 'trial') renderTrialStep();
+    if (screen === 'results') renderResults();
+  }
+
+  function renderSetup(){
+    body.innerHTML =
+      '<div class="sf-title">Setup Trial</div>' +
+      '<div class="sf-sub">Masukkan data mouse kamu dan sensitivitas yang ingin diuji. Trial akan mengukur performa aim kamu di tiap nilai sens, lalu memberi rekomendasi berbasis data — bukan tebakan.</div>' +
+      '<div class="sf-grid2">' +
+        '<div class="sf-field">' +
+          '<label class="sf-label" for="sf-dpi">Mouse DPI</label>' +
+          '<input class="sf-input" id="sf-dpi" type="number" value="' + state.dpi + '" min="100" max="26000" />' +
+        '</div>' +
+        '<div class="sf-field">' +
+          '<label class="sf-label" for="sf-sens">Sens yang biasa kamu pakai sekarang</label>' +
+          '<input class="sf-input" id="sf-sens" type="number" step="0.01" value="' + state.baseSens + '" placeholder="0.4" />' +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-sub" style="font-size:11.5px;">Sistem otomatis akan menguji 5 titik di sekitar sens ini (0.5x, 0.75x, 1x, 1.25x, 1.5x) — mirip cara kerja Universal Sens Finder di Aimlabs, yang memvariasikan sens saat kamu latihan lalu membandingkan performanya, bukan kamu ketik manual satu-satu.</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label" id="sf-playstyle-label">Gaya main</label>' +
+        '<div class="sf-radio-group" id="sf-playstyle-group" role="radiogroup" aria-labelledby="sf-playstyle-label">' +
+          Object.entries(PLAYSTYLES).map(function(e){
+            var key = e[0], p = e[1];
+            return '<div class="sf-radio' + (state.playstyle===key?' selected':'') + '" data-key="' + key + '" role="radio" aria-checked="' + (state.playstyle===key?'true':'false') + '" tabindex="0">' +
+              '<div class="sf-radio-title">' + p.label + '</div>' +
+              '<div class="sf-radio-desc">' + p.desc + '</div></div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-error" id="sf-error" role="alert"></div>' +
+      '<div class="sf-btn-row">' +
+        '<button class="sf-btn" id="sf-start-btn">Mulai Trial →</button>' +
+      '</div>';
+
+    var radios = document.querySelectorAll('.sf-radio');
+    radios.forEach(function(el){
+      function select(){
+        state.playstyle = el.dataset.key;
+        radios.forEach(function(r){
+          r.classList.remove('selected');
+          r.setAttribute('aria-checked','false');
+        });
+        el.classList.add('selected');
+        el.setAttribute('aria-checked','true');
+      }
+      el.addEventListener('click', select);
+      el.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); }
+      });
+    });
+
+    document.getElementById('sf-start-btn').addEventListener('click', function(){
+      var dpiInput = document.getElementById('sf-dpi');
+      var sensInput = document.getElementById('sf-sens');
+      var dpi = parseFloat(dpiInput.value);
+      var baseSens = parseFloat(sensInput.value);
+      var err = document.getElementById('sf-error');
+      if (!dpi || dpi <= 0 || dpi > 100000){ err.textContent = 'DPI tidak valid (100–100000).'; dpiInput.focus(); return; }
+      if (!baseSens || baseSens <= 0 || baseSens > 100){ err.textContent = 'Sens tidak valid (0.01–100).'; sensInput.focus(); return; }
+      err.textContent = '';
+      state.dpi = dpi;
+      state.baseSens = baseSens;
+      state.sensList = SENS_MULTIPLIERS.map(function(m){ return Math.round(baseSens * m * 1000) / 1000; });
+      state.results = {};
+      state.sensList.forEach(function(s){ state.results[s] = {}; });
+      state.trialSensIndex = 0;
+      state.trialTaskIndex = 0;
+      go('trial');
+    });
+  }
+
+  function renderTrialStep(){
+    var sens = state.sensList[state.trialSensIndex];
+    var task = TASK_NAMES[state.trialTaskIndex];
+
+    body.innerHTML =
+      '<div class="sf-trial-hud">' +
+        '<div>SENS <b>' + (state.trialSensIndex+1) + '/' + state.sensList.length + '</b> — nilai <b>' + sens + '</b></div>' +
+        '<div>TASK <b>' + (state.trialTaskIndex+1) + '/3</b> — ' + TASK_LABELS[task] + '</div>' +
+      '</div>' +
+      '<div class="sf-canvas-wrap" id="sf-canvas-wrap">' +
+        '<canvas id="sf-canvas" width="900" height="500"></canvas>' +
+        '<div class="sf-overlay" id="sf-overlay">' +
+          '<span class="sf-pill">' + TASK_LABELS[task].toUpperCase() + '</span>' +
+          '<h3>' + taskIntroTitle(task) + '</h3>' +
+          '<p>' + taskIntroDesc(task) + '</p>' +
+          '<button class="sf-btn" id="sf-lock-btn">Klik untuk mulai</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-sub" style="font-size:11.5px;">Gerakkan mouse di atas area kotak untuk menggerakkan crosshair. Kalau kursor mentok di pinggir layar, gerakkan mouse balik dulu baru lanjut arah yang sama.</div>';
+
+    var canvas = document.getElementById('sf-canvas');
+    var overlay = document.getElementById('sf-overlay');
+    var lockBtn = document.getElementById('sf-lock-btn');
+
+    if (!hasCanvas) {
+      overlay.innerHTML =
+        '<h3>Canvas Tidak Didukung</h3>' +
+        '<p>Browser kamu tidak mendukung HTML5 Canvas yang dibutuhkan untuk menjalankan tes aim. Coba gunakan browser modern seperti Chrome, Firefox, atau Edge.</p>';
+      return;
+    }
+
+    lockBtn.addEventListener('click', function(){
+      var started = false;
+
+      function startTask(locked){
+        if (started) return;
+        started = true;
+        cleanupLockListeners();
+        overlay.style.display = 'none';
+        runTask(task, canvas, sens, locked, function(result){
+          try { if (document.pointerLockElement === canvas) document.exitPointerLock(); } catch(e){}
+          if (!state.results[sens]) state.results[sens] = {};
+          state.results[sens][task] = result;
+          advanceTrial();
+        });
+      }
+
+      function onLockChange(){ if (document.pointerLockElement === canvas) startTask(true); }
+      function onLockError(){ startTask(false); }
+      document.addEventListener('pointerlockchange', onLockChange);
+      document.addEventListener('pointerlockerror', onLockError);
+      function cleanupLockListeners(){
+        document.removeEventListener('pointerlockchange', onLockChange);
+        document.removeEventListener('pointerlockerror', onLockError);
+      }
+
+      try { canvas.requestPointerLock(); } catch(e){ startTask(false); }
+      setTimeout(function(){ startTask(false); }, 400);
+    });
+  }
+
+  function taskIntroTitle(task){
+    if (task === 'flick') return 'Flick Test';
+    if (task === 'tracking') return 'Tracking Test';
+    return 'Switching Test';
+  }
+  function taskIntroDesc(task){
+    if (task === 'flick') return '8 target akan muncul satu per satu di posisi acak. Klik secepat & seakurat mungkin.';
+    if (task === 'tracking') return 'Satu target bergerak selama 8 detik. Arahkan crosshair supaya tetap menempel di target.';
+    return '2 target tampil, salah satunya menyala bergantian. Klik target yang sedang menyala, secepat mungkin.';
+  }
+
+  function advanceTrial(){
+    state.trialTaskIndex++;
+    if (state.trialTaskIndex >= TASK_NAMES.length){
+      state.trialTaskIndex = 0;
+      state.trialSensIndex++;
+    }
+    if (state.trialSensIndex >= state.sensList.length){
+      go('results');
+    } else {
+      go('trial');
+    }
+  }
+
+  var SENS_SCALE = 14;
+
+  function makeCursor(canvas, sensValue, locked){
+    var cur = { x: canvas.width/2, y: canvas.height/2 };
+    function onMove(e){
+      if (locked && document.pointerLockElement !== canvas) return;
+      cur.x += e.movementX * sensValue * (SENS_SCALE/10);
+      cur.y += e.movementY * sensValue * (SENS_SCALE/10);
+      cur.x = Math.max(6, Math.min(canvas.width-6, cur.x));
+      cur.y = Math.max(6, Math.min(canvas.height-6, cur.y));
+    }
+    document.addEventListener('mousemove', onMove);
+    return { cur: cur, dispose: function(){ document.removeEventListener('mousemove', onMove); } };
+  }
+
+  function drawCrosshair(ctx, cur){
+    ctx.strokeStyle = '#45d6c4';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cur.x-8, cur.y); ctx.lineTo(cur.x+8, cur.y);
+    ctx.moveTo(cur.x, cur.y-8); ctx.lineTo(cur.x, cur.y+8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cur.x, cur.y, 2, 0, Math.PI*2);
+    ctx.fillStyle = '#45d6c4';
+    ctx.fill();
+  }
+
+  function stdev(arr){
+    if (arr.length < 2) return 0;
+    var m = arr.reduce(function(a,b){return a+b;},0) / arr.length;
+    var v = arr.reduce(function(a,b){return a+(b-m)*(b-m);},0) / arr.length;
+    return Math.sqrt(v);
+  }
+
+  function runTask(task, canvas, sens, locked, onDone){
+    if (task === 'flick') return runFlick(canvas, sens, locked, onDone);
+    if (task === 'tracking') return runTracking(canvas, sens, locked, onDone);
+    return runSwitching(canvas, sens, locked, onDone);
+  }
+
+  function runFlick(canvas, sens, locked, onDone){
+    var ctx = canvas.getContext('2d');
+    var cursor = makeCursor(canvas, sens, locked);
+    var cur = cursor.cur;
+    var TOTAL = 8, RADIUS = 22;
+    var hits = 0, reactions = [], spawnTime = 0, target = null, running = true, raf;
+
+    function spawnTarget(){
+      target = {
+        x: RADIUS + 20 + Math.random() * (canvas.width - 2*RADIUS - 40),
+        y: RADIUS + 20 + Math.random() * (canvas.height - 2*RADIUS - 40),
+      };
+      spawnTime = performance.now();
+    }
+
+    var count = 0;
+    spawnTarget();
+
+    function onClick(){
+      if (!running) return;
+      var dx = cur.x - target.x, dy = cur.y - target.y;
+      if (Math.sqrt(dx*dx+dy*dy) <= RADIUS){
+        hits++;
+        reactions.push(performance.now() - spawnTime);
+      }
+      count++;
+      if (count >= TOTAL){ finish(); } else { spawnTarget(); }
+    }
+
+    function finish(){
+      running = false;
+      cursor.dispose();
+      canvas.removeEventListener('click', onClick);
+      cancelAnimationFrame(raf);
+      var acc = hits / TOTAL;
+      var avgRt = reactions.length ? reactions.reduce(function(a,b){return a+b;},0)/reactions.length : 999;
+      var stdRt = stdev(reactions);
+      onDone({ acc: acc, avgRt: avgRt, stdRt: stdRt });
+    }
+
+    canvas.addEventListener('click', onClick);
+
+    function loop(){
+      ctx.fillStyle = '#05070a';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#e8a33d';
+      ctx.beginPath(); ctx.arc(target.x, target.y, RADIUS, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '11px monospace';
+      ctx.fillText(count + '/' + TOTAL + ' hit', 12, 20);
+      drawCrosshair(ctx, cur);
+      if (running) raf = requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  function runTracking(canvas, sens, locked, onDone){
+    var ctx = canvas.getContext('2d');
+    var cursor = makeCursor(canvas, sens, locked);
+    var cur = cursor.cur;
+    var DURATION = 8000, RADIUS = 20;
+    var start = performance.now();
+    var samplesOn = 0, samplesTotal = 0, running = true, raf;
+
+    var ax = canvas.width*0.32, ay = canvas.height*0.32;
+    var fx = 0.4 + Math.random()*0.3, fy = 0.5 + Math.random()*0.3;
+    var px = Math.random()*Math.PI*2, py = Math.random()*Math.PI*2;
+
+    function targetPos(t){
+      var cx = canvas.width/2, cy = canvas.height/2;
+      return {
+        x: cx + Math.sin(t*fx + px) * ax,
+        y: cy + Math.sin(t*fy + py) * ay,
+      };
+    }
+
+    function finish(){
+      running = false;
+      cursor.dispose();
+      cancelAnimationFrame(raf);
+      var pct = samplesTotal ? samplesOn / samplesTotal : 0;
+      onDone({ pct: pct });
+    }
+
+    function loop(now){
+      var elapsed = now - start;
+      var t = elapsed/1000;
+      var tgt = targetPos(t);
+
+      ctx.fillStyle = '#05070a';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#e8a33d';
+      ctx.beginPath(); ctx.arc(tgt.x, tgt.y, RADIUS, 0, Math.PI*2); ctx.fill();
+
+      var dx = cur.x - tgt.x, dy = cur.y - tgt.y;
+      if (Math.sqrt(dx*dx+dy*dy) <= RADIUS) samplesOn++;
+      samplesTotal++;
+
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '11px monospace';
+      ctx.fillText(Math.max(0,(DURATION-elapsed)/1000).toFixed(1) + 's left', 12, 20);
+      drawCrosshair(ctx, cur);
+
+      if (elapsed >= DURATION){ finish(); return; }
+      if (running) raf = requestAnimationFrame(loop);
+    }
+    raf = requestAnimationFrame(loop);
+  }
+
+  function runSwitching(canvas, sens, locked, onDone){
+    var ctx = canvas.getContext('2d');
+    var cursor = makeCursor(canvas, sens, locked);
+    var cur = cursor.cur;
+    var TOTAL = 10, RADIUS = 26;
+    var posA = { x: canvas.width*0.28, y: canvas.height/2 };
+    var posB = { x: canvas.width*0.72, y: canvas.height/2 };
+    var active = Math.random() < 0.5 ? 'A' : 'B';
+    var switchTime = performance.now();
+    var hits = 0, reactions = [], count = 0, running = true, raf;
+
+    function onClick(){
+      if (!running) return;
+      var target = active === 'A' ? posA : posB;
+      var dx = cur.x - target.x, dy = cur.y - target.y;
+      if (Math.sqrt(dx*dx+dy*dy) <= RADIUS){
+        hits++;
+        reactions.push(performance.now() - switchTime);
+      }
+      count++;
+      if (count >= TOTAL){ finish(); return; }
+      active = active === 'A' ? 'B' : 'A';
+      switchTime = performance.now();
+    }
+
+    function finish(){
+      running = false;
+      cursor.dispose();
+      canvas.removeEventListener('click', onClick);
+      cancelAnimationFrame(raf);
+      var acc = hits / TOTAL;
+      var avgRt = reactions.length ? reactions.reduce(function(a,b){return a+b;},0)/reactions.length : 999;
+      var stdRt = stdev(reactions);
+      onDone({ acc: acc, avgRt: avgRt, stdRt: stdRt });
+    }
+
+    canvas.addEventListener('click', onClick);
+
+    function loop(){
+      ctx.fillStyle = '#05070a';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      [['A',posA],['B',posB]].forEach(function(item){
+        var key = item[0], pos = item[1];
+        ctx.fillStyle = key === active ? '#e8a33d' : '#2a323e';
+        ctx.beginPath(); ctx.arc(pos.x,pos.y,RADIUS,0,Math.PI*2); ctx.fill();
+      });
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '11px monospace';
+      ctx.fillText(count + '/' + TOTAL + ' switch', 12, 20);
+      drawCrosshair(ctx, cur);
+      if (running) raf = requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  function cm360(sens, dpi){
+    return (360 / (0.07 * sens * dpi)) * 2.54;
+  }
+
+  function normalize(values, higherIsBetter){
+    var min = Math.min.apply(null, values), max = Math.max.apply(null, values);
+    if (max === min) return values.map(function(){ return 100; });
+    return values.map(function(v){
+      var n = (v - min) / (max - min);
+      return higherIsBetter ? n*100 : (1-n)*100;
+    });
+  }
+
+  function renderResults(){
+    var weights = PLAYSTYLES[state.playstyle].weights;
+    var sensList = state.sensList;
+
+    var flickAcc = sensList.map(function(s){ return state.results[s].flick.acc; });
+    var flickRt = sensList.map(function(s){ return state.results[s].flick.avgRt; });
+    var flickStd = sensList.map(function(s){ return state.results[s].flick.stdRt; });
+    var trackPct = sensList.map(function(s){ return state.results[s].tracking.pct; });
+    var swAcc = sensList.map(function(s){ return state.results[s].switching.acc; });
+    var swRt = sensList.map(function(s){ return state.results[s].switching.avgRt; });
+    var swStd = sensList.map(function(s){ return state.results[s].switching.stdRt; });
+
+    var nFlickAcc = normalize(flickAcc, true);
+    var nFlickRt = normalize(flickRt, false);
+    var nTrackPct = normalize(trackPct, true);
+    var nSwAcc = normalize(swAcc, true);
+    var nSwRt = normalize(swRt, false);
+    var nConsistency = normalize(flickStd.map(function(v,i){return v+swStd[i];}), false);
+
+    var totals = sensList.map(function(s, i){
+      var flickScore = (nFlickAcc[i]*0.6 + nFlickRt[i]*0.4);
+      var swScore = (nSwAcc[i]*0.6 + nSwRt[i]*0.4);
+      var trackScore = nTrackPct[i];
+      var core = flickScore*weights.flick + swScore*weights.switching + trackScore*weights.tracking;
+      return core*0.85 + nConsistency[i]*0.15;
+    });
+
+    var maxTotal = Math.max.apply(null, totals);
+    var bestIdx = totals.indexOf(maxTotal);
+    var bestSens = sensList[bestIdx];
+
+    var cvFlick = flickStd.map(function(sd,i){ return flickRt[i] ? sd/flickRt[i] : 0; });
+    var noisy = cvFlick.some(function(cv){ return cv > 0.5; });
+
+    var sortedIdx = totals.map(function(t,i){return [t,i];}).sort(function(a,b){return b[0]-a[0];});
+    var secondIdx = sortedIdx[1];
+    var closeCall = secondIdx && (maxTotal - secondIdx[0]) < 5;
+
+    body.innerHTML =
+      '<div class="sf-title">Hasil Trial</div>' +
+      '<div class="sf-sub">Rekomendasi berikut dihitung dari skor gabungan (akurasi, reaction time, konsistensi) berdasarkan bobot gaya main <b>' + PLAYSTYLES[state.playstyle].label + '</b>.</div>' +
+      (noisy ? '<div class="sf-warn">Data cukup variatif (reaction time tidak konsisten di beberapa sens). Rekomendasi di bawah tetap valid sebagai titik awal, tapi pertimbangkan ulangi trial untuk hasil lebih solid.</div>' : '') +
+      '<div class="sf-recommend">' +
+        '<div class="sf-label">Rekomendasi Sens</div>' +
+        '<div class="sf-recommend-value">' + bestSens + '</div>' +
+        '<div class="sf-recommend-sub">≈ ' + cm360(bestSens, state.dpi).toFixed(1) + ' cm/360° · eDPI ' + (bestSens*state.dpi).toFixed(0) + ' · DPI ' + state.dpi + '</div>' +
+        (closeCall ? '<div class="sf-recommend-sub" style="margin-top:6px;">Skor sens ' + bestSens + ' dan ' + sensList[secondIdx[1]] + ' berdekatan — coba juga nilai di antara keduanya saat fine-tuning manual di game.</div>' : '') +
+      '</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label">Skor Total per Sens</label>' +
+        '<div class="sf-bars">' +
+          sensList.map(function(s, i){
+            return '<div class="sf-bar-row">' +
+              '<div class="sf-bar-label">' + s + '</div>' +
+              '<div class="sf-bar-track"><div class="sf-bar-fill" style="width:' + totals[i].toFixed(0) + '%"></div></div>' +
+              '<div class="sf-bar-val">' + totals[i].toFixed(0) + '</div></div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label">Data Mentah</label>' +
+        '<table class="sf-table">' +
+          '<thead><tr>' +
+            '<th>Sens</th><th>Flick Acc</th><th>Flick RT</th><th>Track %</th><th>Switch Acc</th><th>Switch RT</th><th>Skor</th>' +
+          '</tr></thead><tbody>' +
+          sensList.map(function(s, i){
+            return '<tr' + (i===bestIdx?' class="best"':'') + '>' +
+              '<td>' + s + '</td>' +
+              '<td>' + (flickAcc[i]*100).toFixed(0) + '%</td>' +
+              '<td>' + flickRt[i].toFixed(0) + 'ms</td>' +
+              '<td>' + (trackPct[i]*100).toFixed(0) + '%</td>' +
+              '<td>' + (swAcc[i]*100).toFixed(0) + '%</td>' +
+              '<td>' + swRt[i].toFixed(0) + 'ms</td>' +
+              '<td>' + totals[i].toFixed(0) + '</td></tr>';
+          }).join('') +
+          '</tbody></table>' +
+      '</div>' +
+      '<div class="sf-btn-row">' +
+        '<button class="sf-btn secondary" id="sf-restart-btn">Ulangi dari awal</button>' +
+      '</div>' +
+      '<div class="sf-disclaimer">' +
+        'Tool ini memberi estimasi awal berdasarkan hasil aim-test di browser, yang berbeda dari kondisi in-game sebenarnya (input lag, engine, resolusi crosshair, dll). Gunakan hasil ini sebagai titik awal, lalu sesuaikan lagi secara manual selama beberapa sesi bermain nyata di VALORANT.' +
+      '</div>';
+
+    document.getElementById('sf-restart-btn').addEventListener('click', function(){
+      state.results = {};
+      state.trialSensIndex = 0;
+      state.trialTaskIndex = 0;
+      go('setup');
+    });
+  }
+
+  function init(){
+    root.hidden = false;
+    loader.classList.add('hidden');
+    go('setup');
+  }
+
+  if (!hasCanvas) {
+    root.hidden = false;
+    loader.classList.add('hidden');
+    body.innerHTML =
+      '<div class="sf-unsupported">' +
+        '<h3>Canvas Tidak Didukung</h3>' +
+        '<p>Browser kamu tidak mendukung HTML5 Canvas yang dibutuhkan untuk menjalankan tes aim. Coba gunakan browser modern seperti Chrome, Firefox, atau Edge versi terbaru.</p>' +
+      '</div>';
+    return;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
