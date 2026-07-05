@@ -1,6 +1,6 @@
 kind: wasmer.io/App.v1
 name: aimfinder
-owner: YOUR_USERNAME
+owner: yuumuu
 package: aimfinder
 
 env:

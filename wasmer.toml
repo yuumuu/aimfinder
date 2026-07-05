@@ -3,7 +3,7 @@ name = "aimfinder"
 version = "0.1.0"
 description = "Data-driven aim sensitivity finder for VALORANT and FPS games"
 license = "MIT"
-repository = "https://github.com/YOUR_USERNAME/aimfinder"
+repository = "https://github.com/yuumuu/aimfinder"
 
 [static]
 directory = "public"
