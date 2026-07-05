@@ -1,7 +1,7 @@
 kind: wasmer.io/App.v1
 name: aimfinder
 owner: yuumuu
-package: aimfinder
+package: .
 
 env:
   PUBLIC_DIR: /app/public
