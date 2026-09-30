@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Aim Optimizer V3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+body{margin:0;background:#0b0f14;color:#fff;font-family:sans-serif}
+#ui{position:fixed;top:10px;left:10px;z-index:10}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <button id="start">Start AI Training</button>
+  <div id="result"></div>
+</div>
+
+<script>
+
+// ================= STATE =================
+const state = {
+  sens:0.4,
+  dpi:800,
+  trajectory:[],
+  rounds:[],
+  lastQuat:null,
+  angVel:[],
+  angAcc:[],
+  active:false
+};
+
+// ================= THREE =================
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+camera.position.z = 0;
+
+// ================= TARGET =================
+const geom = new THREE.SphereGeometry(0.5,16,16);
+const mat = new THREE.MeshBasicMaterial({color:0xffaa00});
+
+let target;
+function spawnTarget(){
+  if(target) scene.remove(target);
+  target = new THREE.Mesh(geom,mat);
+  target.position.set(
+    (Math.random()-0.5)*8,
+    (Math.random()-0.5)*5,
+    -10 - Math.random()*10
+  );
+  scene.add(target);
+}
+
+// ================= POINTER LOCK =================
+renderer.domElement.onclick = ()=>renderer.domElement.requestPointerLock();
+
+// ================= ROTATION =================
+function countsToRad(c,dpi,sens){
+  return (c/dpi)*sens*360*(Math.PI/180);
+}
+
+const Y = new THREE.Vector3(0,1,0);
+const X = new THREE.Vector3(1,0,0);
+const qYaw = new THREE.Quaternion();
+const qPitch = new THREE.Quaternion();
+
+document.addEventListener('mousemove',(e)=>{
+  if(!state.active) return;
+  if(document.pointerLockElement!==renderer.domElement) return;
+
+  const dx = countsToRad(e.movementX,state.dpi,state.sens);
+  const dy = countsToRad(e.movementY,state.dpi,state.sens);
+
+  qYaw.setFromAxisAngle(Y,-dx);
+  qPitch.setFromAxisAngle(X,-dy);
+
+  camera.quaternion.multiplyQuaternions(qYaw,camera.quaternion);
+  camera.quaternion.multiply(qPitch);
+});
+
+// ================= RAYCAST =================
+const raycaster = new THREE.Raycaster();
+
+function getDistanceToTarget(){
+  raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
+  const hit = raycaster.intersectObject(target);
+  if(hit.length) return hit[0].distance;
+  return null;
+}
+
+// ================= TELEMETRY =================
+function logFrame(){
+  const q = camera.quaternion;
+
+  // angular velocity
+  if(state.lastQuat){
+    const dq = q.clone().multiply(state.lastQuat.clone().invert());
+    const angle = 2*Math.acos(dq.w);
+
+    state.angVel.push(angle);
+
+    if(state.angVel.length>1){
+      const acc = state.angVel[state.angVel.length-1] - state.angVel[state.angVel.length-2];
+      state.angAcc.push(acc);
+    }
+  }
+
+  state.lastQuat = q.clone();
+
+  state.trajectory.push({
+    x:q.x,y:q.y,z:q.z,w:q.w,
+    dist:getDistanceToTarget(),
+    t:performance.now()
+  });
+}
+
+// ================= METRICS =================
+function smoothness(){
+  if(state.angAcc.length<5) return 0;
+  const mean = state.angAcc.reduce((a,b)=>a+b,0)/state.angAcc.length;
+  const varr = state.angAcc.reduce((a,b)=>a+(b-mean)**2,0)/state.angAcc.length;
+  return 1/(Math.sqrt(varr)+1e-5);
+}
+
+function deviation(){
+  let total=0,count=0;
+  for(let p of state.trajectory){
+    if(p.dist!=null){
+      total+=p.dist;
+      count++;
+    }
+  }
+  return count? total/count : 1;
+}
+
+// ================= ANOMALY FILTER =================
+function validRound(r){
+  if(r.acc < 0.1) return false;
+  if(r.rt > 1500) return false;
+  if(r.smooth < 0.001) return false;
+  return true;
+}
+
+// ================= SCORE =================
+function score(r){
+  return 0.4*r.acc + 0.3*r.smooth - 0.2*r.dev - 0.1*r.rt;
+}
+
+// ================= SAMPLING =================
+function rand(min,max){ return min + Math.random()*(max-min); }
+
+// ================= ROUND =================
+async function runRound(){
+
+  state.trajectory=[];
+  state.angVel=[];
+  state.angAcc=[];
+  state.lastQuat=null;
+
+  state.sens = rand(0.1,1);
+  state.dpi = rand(400,1600);
+
+  spawnTarget();
+
+  state.active=true;
+  const start = performance.now();
+
+  await new Promise(r=>setTimeout(r,4000));
+
+  state.active=false;
+
+  const r = {
+    sens:state.sens,
+    dpi:state.dpi,
+    acc:Math.random(),
+    smooth:smoothness(),
+    dev:deviation(),
+    rt:performance.now()-start
+  };
+
+  r.score = score(r);
+
+  if(validRound(r)){
+    state.rounds.push(r);
+  }
+}
+
+// ================= AI WORKER =================
+const worker = new Worker(URL.createObjectURL(new Blob([`
+
+onmessage = function(e){
+
+  const data = e.data;
+
+  function kernel(a,b){
+    const ds = a.sens - b.sens;
+    const dd = a.dpi - b.dpi;
+    return Math.exp(-(ds*ds/0.1 + dd*dd/50000));
+  }
+
+  function predict(p){
+    let num=0,den=0;
+    for(let d of data){
+      const k = kernel(p,d);
+      num += k*d.score;
+      den += k;
+    }
+    return num/den;
+  }
+
+  let best={score:-Infinity};
+
+  for(let s=0.1;s<=1;s+=0.02){
+    for(let d=400;d<=1600;d+=40){
+      let val = predict({sens:s,dpi:d});
+      if(val>best.score){
+        best={sens:s,dpi:d,score:val};
+      }
+    }
+  }
+
+  postMessage(best);
+}
+
+`],{type:'application/javascript'})));
+
+worker.onmessage = (e)=>{
+  document.getElementById('result').innerText =
+    "Optimal Sens: "+e.data.sens.toFixed(3) +
+    " | DPI: "+Math.round(e.data.dpi);
+};
+
+// ================= LOOP =================
+function loop(){
+  logFrame();
+  renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ================= START =================
+document.getElementById('start').onclick = async ()=>{
+  for(let i=0;i<40;i++){
+    await runRound();
+  }
+  worker.postMessage(state.rounds);
+};
+
+</script>
+</body>
+</html>
