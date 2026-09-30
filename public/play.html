@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sens Finder 3D — PSA Sensitivity Tool</title>
+<meta name="description" content="Find your optimal mouse sensitivity for VALORANT & CS2 through 3D aim trials with PSA binary search algorithm.">
+<meta property="og:title" content="Sens Finder 3D — PSA Sensitivity Tool">
+<meta property="og:description" content="Find your optimal mouse sensitivity through 3D aim trials with automated PSA binary search.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0d11">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0d11'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23e8a33d' font-family='monospace' font-weight='bold'>S</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  #sf-loader {
+    position: fixed; inset: 0; z-index: 999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    background: #0a0d11; color: #e6e9ee; font-family: 'Consolas', 'SFMono-Regular', 'Courier New', monospace;
+    transition: opacity .4s, visibility .4s;
+  }
+  #sf-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  #sf-loader .spinner {
+    width: 32px; height: 32px; border: 2px solid #232a34; border-top-color: #e8a33d;
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #sf-root {
+    --bg: #0a0d11;
+    --panel: #12161c;
+    --panel-2: #171c24;
+    --line: #232a34;
+    --text: #e6e9ee;
+    --muted: #7c8797;
+    --accent: #e8a33d;
+    --accent-2: #45d6c4;
+    --danger: #ff5d5d;
+    --mono: 'Consolas', 'SFMono-Regular', 'Courier New', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+  }
+  #sf-root * { box-sizing: border-box; }
+  .sf-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #10141a, #0d1116);
+  }
+  .sf-brand { font-family: var(--mono); font-weight: 700; letter-spacing: 2px; font-size: 13px; color: var(--accent); text-transform: uppercase; }
+  .sf-brand span { color: var(--muted); font-weight: 400; }
+  .sf-body { flex: 1; padding: 26px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+
+  .sf-title { font-size: 20px; font-weight: 700; letter-spacing: .3px; }
+  .sf-sub { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .sf-field { display: flex; flex-direction: column; gap: 6px; }
+  .sf-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); font-family: var(--mono); }
+  .sf-input {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    padding: 10px 12px; border-radius: 8px; font-family: var(--mono); font-size: 14px; outline: none;
+  }
+  .sf-input:focus { border-color: var(--accent); }
+  .sf-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sf-btn {
+    background: var(--accent); color: #1a1305; border: none; padding: 12px 22px; border-radius: 8px;
+    font-weight: 700; font-size: 13.5px; cursor: pointer; letter-spacing: .3px; font-family: var(--sans);
+    transition: transform .1s, filter .15s;
+  }
+  .sf-btn:hover { filter: brightness(1.08); }
+  .sf-btn:active { transform: scale(0.98); }
+  .sf-btn.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .sf-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .sf-btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: auto; padding-top: 10px; }
+  .sf-error { color: var(--danger); font-size: 12px; }
+
+  .sf-radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sf-radio {
+    border: 1px solid var(--line); background: var(--panel-2); padding: 12px 14px; border-radius: 10px;
+    cursor: pointer; flex: 1; min-width: 120px; transition: all .15s; text-align: center;
+  }
+  .sf-radio.selected { border-color: var(--accent); background: rgba(232,163,61,0.08); }
+  .sf-radio-title { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+  .sf-radio-desc { font-size: 11.5px; color: var(--muted); }
+
+  #scene-wrap {
+    position: relative; width: 100%; flex: 1; overflow: hidden; background: #05070a;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 400px; border: 1px solid var(--line); border-radius: 10px;
+  }
+  #scene-wrap canvas { display: block; width: 100%; height: 100%; cursor: none; }
+  #crosshair {
+    position: absolute; top: 50%; left: 50%; pointer-events: none; z-index: 10;
+    transform: translate(-50%, -50%);
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: #45d6c4;
+  }
+  #crosshair::before { width: 18px; height: 1.5px; top: -0.75px; left: -9px; }
+  #crosshair::after { width: 1.5px; height: 18px; top: -9px; left: -0.75px; }
+  #crosshair .dot {
+    width: 3px; height: 3px; background: #45d6c4; border-radius: 50%;
+    position: absolute; top: -1.5px; left: -1.5px;
+  }
+  #crosshair.miss::before, #crosshair.miss::after, #crosshair.miss .dot { background: #ff5d5d; }
+
+  .hud {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+    display: flex; justify-content: space-between; padding: 12px 16px;
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    pointer-events: none;
+  }
+  .hud b { color: var(--text); }
+  .hud .accent { color: var(--accent); }
+
+  #test-overlay {
+    position: absolute; inset: 0; z-index: 8;
+    background: rgba(5,7,10,0.9); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 20px;
+  }
+  #test-overlay.hidden { display: none; }
+  .test-round { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: 2px; }
+  .test-sens { font-size: 32px; font-weight: 700; font-family: var(--mono); }
+  .test-hint { color: var(--muted); font-size: 13px; max-width: 360px; line-height: 1.6; }
+  .test-countdown { font-size: 48px; font-weight: 700; color: var(--accent-2); font-family: var(--mono); }
+
+  .sf-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  .sf-table th, .sf-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+  .sf-table th { color: var(--muted); font-weight: 500; text-transform: uppercase; font-size: 10.5px; letter-spacing: .8px; }
+  .sf-table tr.best { background: rgba(69,214,196,0.06); }
+  .sf-table tr.best td:first-child { color: var(--accent-2); font-weight: 700; }
+
+  .sf-recommend {
+    border: 1px solid var(--accent); background: rgba(232,163,61,0.06); border-radius: 12px; padding: 18px 20px;
+  }
+  .sf-recommend .sf-label { color: var(--accent); }
+  .sf-recommend-value { font-family: var(--mono); font-size: 28px; font-weight: 700; margin: 4px 0; }
+  .sf-recommend-sub { font-size: 12.5px; color: var(--muted); }
+  .sf-warn { border: 1px solid #6b5420; background: rgba(232,163,61,0.06); padding: 10px 14px; border-radius: 8px; font-size: 12px; color: var(--accent); }
+
+  .sf-bars { display: flex; flex-direction: column; gap: 8px; }
+  .sf-bar-row { display: flex; align-items: center; gap: 10px; }
+  .sf-bar-label { font-family: var(--mono); font-size: 11.5px; width: 70px; color: var(--muted); flex-shrink: 0; }
+  .sf-bar-track { flex: 1; height: 14px; background: var(--panel-2); border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+  .sf-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width .6s; }
+  .sf-bar-val { font-family: var(--mono); font-size: 11.5px; width: 36px; text-align: right; flex-shrink: 0; }
+  .sf-bar-round { font-size: 10px; color: var(--muted); width: 50px; flex-shrink: 0; }
+
+  .sf-disclaimer { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; line-height: 1.6; }
+
+  @media (max-width: 600px) {
+    .sf-grid2 { grid-template-columns: 1fr; }
+    .sf-body { padding: 16px; }
+    .sf-recommend-value { font-size: 22px; }
+    .test-sens { font-size: 24px; }
+    .test-countdown { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sf-loader" role="status" aria-label="Loading">
+  <div class="spinner"></div>
+  <div class="brand">Sens Finder 3D</div>
+  <div class="status">Loading PSA engine…</div>
+</div>
+
+<div id="sf-root" hidden>
+  <div class="sf-header">
+    <div class="sf-brand">SENS://FINDER <span>3D</span></div>
+    <div id="sf-header-status" style="font-family:var(--mono);font-size:12px;color:var(--muted);"></div>
+  </div>
+  <div class="sf-body" id="sf-body" role="main"></div>
+</div>
+
+<script>
+(function(){
+  var root = document.getElementById('sf-root');
+  var loader = document.getElementById('sf-loader');
+  var body = document.getElementById('sf-body');
+
+  var GAMES = {
+    valorant: { yaw: 0.07, label: 'VALORANT', proEdpi: 280, icon: '▼' },
+    cs2: { yaw: 0.022, label: 'CS2', proEdpi: 880, icon: '⬤' },
+  };
+
+  var PSA_ITERATIONS = 7;
+  var TEST_DURATION = 12000;
+
+  var state = {
+    screen: 'setup',
+    game: 'valorant',
+    dpi: 800,
+    baseSens: 0.4,
+    low: 0,
+    high: 0,
+    iteration: 0,
+    results: [],
+    scene: null,
+    camera: null,
+    renderer: null,
+    target: null,
+    targetMat: null,
+    raycaster: null,
+    testActive: false,
+    testHits: 0,
+    testMisses: 0,
+    testStartTime: 0,
+    targetSpawnTime: 0,
+    testRt: [],
+    testSens: 0,
+    pitch: 0,
+    yaw: 0,
+    animId: null,
+    testTimer: null,
+    hudTimer: null,
+  };
+
+  function cm360(sens, dpi, yaw) { return (360 * 2.54) / (sens * dpi * yaw); }
+  function edpiCalc(sens, dpi) { return sens * dpi; }
+
+  function render() {
+    if (state.screen === 'setup') renderSetup();
+    else if (state.screen === 'results') renderResults();
+  }
+
+  function renderSetup() {
+    body.innerHTML =
+      '<div class="sf-title">PSA Sensitivity Finder 3D</div>' +
+      '<div class="sf-sub">Temukan sensitivitas optimalmu dengan algoritma <b>PSA (Perfect Sensitivity Approximation)</b> — binary search 7 iterasi. Tiap iterasi menguji 2 nilai sens via aim test 3D otomatis, lalu mempersempit range berdasarkan skor performa. Hasil: rekomendasi sens berbasis data, bukan tebakan.</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label">Pilih Game</label>' +
+        '<div class="sf-radio-group" id="game-group">' +
+          Object.entries(GAMES).map(function(e){
+            var k = e[0], g = e[1];
+            return '<div class="sf-radio ' + (state.game===k?'selected':'') + '" data-key="' + k + '">' +
+              '<div class="sf-radio-title">' + g.icon + ' ' + g.label + '</div>' +
+              '<div class="sf-radio-desc">Yaw ' + g.yaw + ' · Pro avg ' + g.proEdpi + ' eDPI</div></div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-grid2">' +
+        '<div class="sf-field">' +
+          '<label class="sf-label" for="sf-dpi">Mouse DPI</label>' +
+          '<input class="sf-input" id="sf-dpi" type="number" value="' + state.dpi + '" min="100" max="26000" />' +
+        '</div>' +
+        '<div class="sf-field">' +
+          '<label class="sf-label" for="sf-sens">Sens yang biasa kamu pakai</label>' +
+          '<input class="sf-input" id="sf-sens" type="number" step="0.01" value="' + state.baseSens + '" />' +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label">Info Tes</label>' +
+        '<div class="sf-sub" style="font-size:11.5px;">' +
+          '• ' + PSA_ITERATIONS + ' iterasi binary search × 2 tes per iterasi = ' + (PSA_ITERATIONS*2) + ' tes' +
+          '<br>• Tiap tes: ' + (TEST_DURATION/1000) + ' detik aim test 3D — klik target yang muncul secepat & seakurat mungkin' +
+          '<br>• Total estimasi: ~' + Math.round((PSA_ITERATIONS*2*(TEST_DURATION/1000 + 4))/60) + ' menit' +
+          '<br>• Gunakan <b>mouse</b>, bukan touchpad. Pastikan kursor terkunci (pointer lock).' +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-error" id="sf-error" role="alert"></div>' +
+      '<div class="sf-btn-row">' +
+        '<button class="sf-btn" id="sf-start-btn">Mulai PSA Test →</button>' +
+      '</div>';
+
+    document.querySelectorAll('#game-group .sf-radio').forEach(function(el){
+      el.addEventListener('click', function(){
+        state.game = el.dataset.key;
+        document.querySelectorAll('#game-group .sf-radio').forEach(function(r){ r.classList.remove('selected'); });
+        el.classList.add('selected');
+      });
+    });
+
+    document.getElementById('sf-start-btn').addEventListener('click', function(){
+      var dpiVal = parseFloat(document.getElementById('sf-dpi').value);
+      var sensVal = parseFloat(document.getElementById('sf-sens').value);
+      var err = document.getElementById('sf-error');
+      if (!dpiVal || dpiVal <= 0 || dpiVal > 100000) { err.textContent = 'DPI tidak valid.'; return; }
+      if (!sensVal || sensVal <= 0 || sensVal > 100) { err.textContent = 'Sens tidak valid.'; return; }
+      err.textContent = '';
+      state.dpi = dpiVal;
+      state.baseSens = sensVal;
+      state.low = sensVal * 0.4;
+      state.high = sensVal * 2.5;
+      state.results = [];
+      state.iteration = 0;
+      startPSA();
+    });
+  }
+
+  function setupTestUI() {
+    body.innerHTML =
+      '<div id="scene-wrap">' +
+        '<div id="crosshair"><div class="dot"></div></div>' +
+        '<div class="hud" id="hud">' +
+          '<div><b id="hud-round">1</b>/7 · <b id="hud-cand">A</b></div>' +
+          '<div>Sens: <b class="accent" id="hud-sens">0.00</b></div>' +
+          '<div>Hits: <b id="hud-hits">0</b> · <span id="hud-time">12</span>s</div>' +
+        '</div>' +
+        '<div id="test-overlay">' +
+          '<div class="test-round" id="to-round">ROUND 1/7</div>' +
+          '<div class="test-sens" id="to-sens">0.00</div>' +
+          '<div class="test-countdown" id="to-countdown">3</div>' +
+          '<div class="test-hint" id="to-hint">Bersiaplah…</div>' +
+        '</div>' +
+      '</div>';
+    document.getElementById('to-round').innerHTML = '&nbsp;';
+    document.getElementById('to-hint').innerHTML = '';
+    document.getElementById('to-sens').innerHTML = 'Klik untuk mulai';
+    document.getElementById('to-countdown').style.display = 'none';
+  }
+
+  function startPSA() {
+    state.screen = 'test';
+    setupTestUI();
+    initScene();
+    var wrap = document.getElementById('scene-wrap');
+    wrap.insertBefore(state.renderer.domElement, wrap.firstChild);
+    resizeScene();
+    setupPersistentHandlers();
+
+    requestLock();
+    document.getElementById('test-overlay').addEventListener('click', function onFirstClick(){
+      document.getElementById('test-overlay').removeEventListener('click', onFirstClick);
+      requestLock();
+      document.getElementById('to-round').innerHTML = 'ROUND 1/7 — Candidate A';
+      document.getElementById('to-hint').innerHTML = 'Arahkan crosshair ke target dan klik. Akurat & cepat!';
+      document.getElementById('to-countdown').style.display = 'block';
+      document.getElementById('to-countdown').textContent = '3';
+      document.getElementById('to-sens').innerHTML = state.baseSens.toFixed(4);
+      runIteration(1);
+    });
+  }
+
+  function runIteration(iter) {
+    if (iter > PSA_ITERATIONS) {
+      finishPSA();
+      return;
+    }
+
+    state.iteration = iter;
+
+    var sensA = +(state.low + (state.high - state.low) * 0.35).toFixed(6);
+    var sensB = +(state.low + (state.high - state.low) * 0.65).toFixed(6);
+
+    var roundData = {
+      round: iter,
+      low: state.low,
+      high: state.high,
+      sensA: sensA,
+      sensB: sensB,
+      scoreA: 0,
+      scoreB: 0,
+      initLow: state.low,
+      initHigh: state.high,
+    };
+
+    showOverlay(iter, 'Candidate A', sensA, 'Arahkan crosshair ke target dan klik. Akurat & cepat!', 3, function(){
+      runSingleTest(sensA, iter, 'A', function(scoreA){
+        roundData.scoreA = scoreA;
+        cleanupTest();
+
+        showOverlay(iter, 'Candidate B', sensB, 'Sekarang coba nilai sens yang berbeda.', 2, function(){
+          runSingleTest(sensB, iter, 'B', function(scoreB){
+            roundData.scoreB = scoreB;
+            cleanupTest();
+
+            if (scoreA > scoreB) {
+              state.high = sensB;
+            } else {
+              state.low = sensA;
+            }
+
+            state.results.push(roundData);
+
+            showOverlay(iter, '✓ Round ' + iter + ' Selesai', 0, 'A: ' + scoreA.toFixed(0) + ' poin vs B: ' + scoreB.toFixed(0) + ' → range: ' + state.low.toFixed(4) + ' – ' + state.high.toFixed(4), 2, function(){
+              runIteration(iter + 1);
+            });
+          });
+        });
+      });
+    });
+  }
+
+  function showOverlay(round, label, sens, msg, countdown, cb) {
+    var overlay = document.getElementById('test-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('hidden');
+    document.getElementById('to-round').textContent = 'ROUND ' + round + '/' + PSA_ITERATIONS + ' — ' + label;
+    document.getElementById('to-sens').textContent = sens > 0 ? sens.toFixed(4) : '—';
+    document.getElementById('to-hint').textContent = msg;
+
+    var cdEl = document.getElementById('to-countdown');
+    cdEl.style.display = 'block';
+    var cd = countdown;
+    cdEl.textContent = cd;
+
+    var hudRound = document.getElementById('hud-round');
+    var hudCand = document.getElementById('hud-cand');
+    var hudSens = document.getElementById('hud-sens');
+    if (hudRound) hudRound.textContent = round;
+    if (hudCand) hudCand.textContent = label;
+    if (hudSens && sens > 0) hudSens.textContent = sens.toFixed(4);
+
+    var iv = setInterval(function(){
+      cd--;
+      if (cd <= 0) {
+        clearInterval(iv);
+        cdEl.style.display = 'none';
+        overlay.classList.add('hidden');
+        if (cb) cb();
+      } else {
+        cdEl.textContent = cd;
+      }
+    }, 1000);
+  }
+
+  // Persistent handlers — set up once in startPSA, controlled by state.testActive
+  function setupPersistentHandlers() {
+    document.addEventListener('mousemove', function onPSAMove(e) {
+      if (!state.testActive || !state.camera) return;
+      if (document.pointerLockElement !== state.renderer.domElement) return;
+      var game = GAMES[state.game];
+      var factor = state.testSens * game.yaw * 0.008;
+      state.yaw -= e.movementX * factor;
+      state.pitch -= e.movementY * factor;
+      state.pitch = Math.max(-Math.PI/2.3, Math.min(Math.PI/2.3, state.pitch));
+      state.camera.quaternion.setFromEuler(new THREE.Euler(state.pitch, state.yaw, 0, 'YXZ'));
+    });
+
+    document.addEventListener('mousedown', function onPSAClick() {
+      if (!state.testActive || !state.target || !state.camera) return;
+      state.raycaster.setFromCamera({ x: 0, y: 0 }, state.camera);
+      var hits = state.raycaster.intersectObject(state.target);
+      var ch = document.getElementById('crosshair');
+      if (hits.length > 0) {
+        state.testHits++;
+        state.testRt.push(performance.now() - state.targetSpawnTime);
+        if (ch) ch.classList.remove('miss');
+        spawnTarget();
+      } else {
+        state.testMisses++;
+        if (ch) { ch.classList.add('miss'); setTimeout(function(){ ch.classList.remove('miss'); }, 80); }
+      }
+    });
+  }
+
+  function runSingleTest(sens, round, cand, done) {
+    state.testActive = true;
+    state.testHits = 0;
+    state.testMisses = 0;
+    state.testRt = [];
+    state.testStartTime = performance.now();
+    state.targetSpawnTime = 0;
+    state.pitch = 0;
+    state.yaw = 0;
+    state.testSens = sens;
+    state.testTimer = null;
+    state.hudTimer = null;
+
+    if (state.camera) {
+      state.camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
+    }
+
+    var hudHits = document.getElementById('hud-hits');
+    var hudTime = document.getElementById('hud-time');
+    var hudSens = document.getElementById('hud-sens');
+    var hudRound = document.getElementById('hud-round');
+    var hudCand = document.getElementById('hud-cand');
+    if (hudRound) hudRound.textContent = round;
+    if (hudCand) hudCand.textContent = cand;
+    if (hudSens) hudSens.textContent = sens.toFixed(4);
+
+    spawnTarget();
+
+    state.hudTimer = setInterval(function(){
+      if (!state.testActive) return;
+      var elapsed = performance.now() - state.testStartTime;
+      var remaining = Math.max(0, Math.ceil((TEST_DURATION - elapsed) / 1000));
+      if (hudHits) hudHits.textContent = state.testHits;
+      if (hudTime) hudTime.textContent = remaining;
+    }, 100);
+
+    state.testTimer = setTimeout(function(){
+      if (!state.testActive) return;
+      state.testActive = false;
+      if (state.hudTimer) { clearInterval(state.hudTimer); state.hudTimer = null; }
+      if (state.target) { state.scene.remove(state.target); state.target = null; }
+
+      var total = state.testHits + state.testMisses;
+      var accuracy = total > 0 ? state.testHits / total : 0;
+      var avgRt = state.testRt.length > 0 ? state.testRt.reduce(function(a,b){return a+b;},0)/state.testRt.length : 999;
+      var accScore = accuracy * 70;
+      var rtScore = Math.max(0, (1 - avgRt/1200) * 30);
+      var finalScore = +(accScore + rtScore).toFixed(2);
+
+      done(finalScore);
+    }, TEST_DURATION);
+  }
+
+  function requestLock() {
+    try {
+      if (document.pointerLockElement !== state.renderer.domElement) {
+        state.renderer.domElement.requestPointerLock();
+      }
+    } catch(e) {}
+  }
+
+  function cleanupTest() {
+    state.testActive = false;
+    if (state.hudTimer) { clearInterval(state.hudTimer); state.hudTimer = null; }
+    if (state.testTimer) { clearTimeout(state.testTimer); state.testTimer = null; }
+    if (state.target) { state.scene.remove(state.target); state.target = null; }
+  }
+
+  var targetGeom = new THREE.SphereGeometry(0.55, 16, 16);
+  var targetMat = new THREE.MeshStandardMaterial({
+    color: 0xe8a33d, emissive: 0xe8a33d, emissiveIntensity: 0.4, metalness: 0.3, roughness: 0.4
+  });
+
+  function spawnTarget() {
+    if (!state.scene) return;
+    if (state.target) state.scene.remove(state.target);
+    state.target = new THREE.Mesh(targetGeom, targetMat);
+    var x = (Math.random() - 0.5) * 14;
+    var y = 0.5 + Math.random() * 5;
+    var z = -8 - Math.random() * 7;
+    state.target.position.set(x, y, z);
+    state.scene.add(state.target);
+    state.targetSpawnTime = performance.now();
+  }
+
+  function initScene() {
+    if (state.renderer) {
+      state.renderer.domElement.remove();
+      state.renderer.dispose();
+    }
+
+    var wrap = document.getElementById('scene-wrap');
+    if (!wrap) return;
+    var w = wrap.clientWidth || 800;
+    var h = wrap.clientHeight || 500;
+
+    state.scene = new THREE.Scene();
+    state.scene.background = new THREE.Color(0x05070a);
+    state.scene.fog = new THREE.Fog(0x05070a, 25, 45);
+
+    state.camera = new THREE.PerspectiveCamera(80, w / h, 0.1, 100);
+    state.camera.position.set(0, 1.7, 0);
+
+    state.renderer = new THREE.WebGLRenderer({ antialias: true });
+    state.renderer.setSize(w, h);
+    state.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    var ambient = new THREE.AmbientLight(0x404060, 0.6);
+    state.scene.add(ambient);
+
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 10, 7);
+    state.scene.add(dirLight);
+
+    var fillLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+    fillLight.position.set(-5, 5, -5);
+    state.scene.add(fillLight);
+
+    var grid = new THREE.GridHelper(40, 20, 0x1a2332, 0x1a2332);
+    grid.position.y = -0.5;
+    state.scene.add(grid);
+
+    state.raycaster = new THREE.Raycaster();
+    animate();
+  }
+
+  function resizeScene() {
+    if (!state.renderer) return;
+    var wrap = document.getElementById('scene-wrap');
+    if (!wrap) return;
+    var w = wrap.clientWidth;
+    var h = wrap.clientHeight;
+    if (w > 0 && h > 0) {
+      state.renderer.setSize(w, h);
+      if (state.camera) {
+        state.camera.aspect = w / h;
+        state.camera.updateProjectionMatrix();
+      }
+    }
+  }
+
+  function animate() {
+    if (!state.renderer || !state.scene || !state.camera) return;
+    state.animId = requestAnimationFrame(animate);
+    state.renderer.render(state.scene, state.camera);
+  }
+
+  function finishPSA() {
+    cleanupTest();
+    if (state.renderer) {
+      cancelAnimationFrame(state.animId);
+      state.renderer.domElement.remove();
+      state.renderer.dispose();
+      state.renderer = null;
+    }
+    state.screen = 'results';
+    renderResults();
+  }
+
+  function renderResults() {
+    var game = GAMES[state.game];
+    var finalLow = state.low;
+    var finalHigh = state.high;
+    var optimal = (finalLow + finalHigh) / 2;
+    var cms = cm360(optimal, state.dpi, game.yaw);
+    var eDpi = edpiCalc(optimal, state.dpi);
+    var initialLow = state.baseSens * 0.4;
+    var initialHigh = state.baseSens * 2.5;
+    var totalRange = initialHigh - initialLow;
+
+    var convBars = state.results.map(function(r, i){
+      var mid = (r.low + r.high) / 2;
+      var lowPct = totalRange > 0 ? ((r.low - initialLow) / totalRange) * 100 : 50;
+      var highPct = totalRange > 0 ? ((r.high - initialLow) / totalRange) * 100 : 50;
+      var midPct = totalRange > 0 ? ((mid - initialLow) / totalRange) * 100 : 50;
+      var winner = r.scoreA > r.scoreB ? 'A' : 'B';
+      var betterVal = winner === 'A' ? r.scoreA.toFixed(0) : r.scoreB.toFixed(0);
+
+      return '<div class="sf-bar-row">' +
+        '<div class="sf-bar-round">R' + (i+1) + '</div>' +
+        '<div class="sf-bar-track" style="position:relative;">' +
+          '<div class="sf-bar-fill" style="position:absolute;left:' + lowPct + '%;width:' + (highPct-lowPct) + '%;height:100%;opacity:0.3;background:var(--line);border-radius:3px;"></div>' +
+          '<div class="sf-bar-fill" style="position:absolute;left:' + midPct + '%;width:4px;height:100%;background:var(--accent-2);transform:translateX(-2px);border-radius:2px;"></div>' +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--muted);width:80px;flex-shrink:0;text-align:right;">' + r.sensA.toFixed(4) + ' vs ' + r.sensB.toFixed(4) + '</div>' +
+        '<div style="font-size:10px;color:var(--accent);width:30px;flex-shrink:0;text-align:right;">' + winner + '=' + betterVal + '</div>' +
+      '</div>';
+    }).join('');
+
+    var allTests = [];
+    state.results.forEach(function(r){
+      allTests.push({ sens: r.sensA, score: r.scoreA, round: r.round, cand: 'A' });
+      allTests.push({ sens: r.sensB, score: r.scoreB, round: r.round, cand: 'B' });
+    });
+
+    var maxScore = Math.max.apply(null, allTests.map(function(t){return t.score;}));
+    var bestTest = allTests.reduce(function(b, t){ return t.score > b.score ? t : b; }, allTests[0]);
+
+    var scoreBars = allTests.map(function(t){
+      var pct = maxScore > 0 ? (t.score / maxScore) * 100 : 0;
+      return '<div class="sf-bar-row">' +
+        '<div class="sf-bar-label" style="width:80px;">R' + t.round + t.cand + ' ' + t.sens.toFixed(4) + '</div>' +
+        '<div class="sf-bar-track"><div class="sf-bar-fill" style="width:' + pct + '%' + (t.sens===bestTest.sens?'':';opacity:0.6') + '"></div></div>' +
+        '<div class="sf-bar-val">' + t.score.toFixed(0) + '</div></div>';
+    }).join('');
+
+    var tableRows = state.results.map(function(r, i){
+      var winner = r.scoreA > r.scoreB ? 'A (' + r.sensA.toFixed(4) + ')' : 'B (' + r.sensB.toFixed(4) + ')';
+      return '<tr>' +
+        '<td>' + (i+1) + '</td>' +
+        '<td>' + r.sensA.toFixed(4) + '</td>' +
+        '<td>' + r.scoreA.toFixed(0) + '</td>' +
+        '<td>' + r.sensB.toFixed(4) + '</td>' +
+        '<td>' + r.scoreB.toFixed(0) + '</td>' +
+        '<td>' + winner + '</td>' +
+        '<td>' + r.low.toFixed(4) + ' – ' + r.high.toFixed(4) + '</td></tr>';
+    }).join('');
+
+    body.innerHTML =
+      '<div class="sf-title">Hasil PSA — Selesai!</div>' +
+      '<div class="sf-sub">Algoritma PSA selesai dalam ' + PSA_ITERATIONS + ' iterasi (' + (PSA_ITERATIONS*2) + ' tes). Berikut rekomendasi sensitivitas optimalmu berdasarkan performa aim 3D.</div>' +
+      '<div class="sf-recommend">' +
+        '<div class="sf-label">' + game.label + ' — Rekomendasi Sens</div>' +
+        '<div class="sf-recommend-value">' + optimal.toFixed(4) + '</div>' +
+        '<div class="sf-recommend-sub">≈ ' + cms.toFixed(1) + ' cm/360° · ' + eDpi.toFixed(0) + ' eDPI · DPI ' + state.dpi + '</div>' +
+      '</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label">Konvergensi PSA</label>' +
+        '<div class="sf-sub" style="font-size:11px;margin-bottom:4px;">Setiap bar = range pencarian di tiap round. <span style="color:var(--accent-2);">│</span> = midpoint. Range menyempit dari ' + initialLow.toFixed(3) + ' – ' + initialHigh.toFixed(3) + ' ke ' + finalLow.toFixed(4) + ' – ' + finalHigh.toFixed(4) + '.</div>' +
+        '<div class="sf-bars">' + convBars + '</div>' +
+      '</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label">Skor Semua Tes</label>' +
+        '<div class="sf-sub" style="font-size:11px;margin-bottom:4px;">Skor gabungan (akurasi × 70 + reaction time × 30). Tertinggi: ' + bestTest.sens.toFixed(4) + ' (' + bestTest.score.toFixed(0) + ' poin).</div>' +
+        '<div class="sf-bars">' + scoreBars + '</div>' +
+      '</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label">Data Mentah Per Iterasi</label>' +
+        '<table class="sf-table">' +
+          '<thead><tr><th>#</th><th>Sens A</th><th>Skor A</th><th>Sens B</th><th>Skor B</th><th>Pemenang</th><th>Range Baru</th></tr></thead><tbody>' +
+          tableRows +
+          '</tbody></table>' +
+      '</div>' +
+      '<div class="sf-warn">' +
+        'Skor dari aim test 3D di browser bisa berbeda dengan kondisi in-game (input lag, FOV, engine). Gunakan hasil ini sebagai titik awal, lalu fine-tuning ±0.02–0.05 sesuai feel.' +
+      '</div>' +
+      '<div class="sf-btn-row">' +
+        '<button class="sf-btn" id="sf-copy-btn">Salin ' + optimal.toFixed(4) + '</button>' +
+        '<button class="sf-btn secondary" id="sf-restart-btn">Ulangi dari awal</button>' +
+      '</div>' +
+      '<div class="sf-disclaimer">' +
+        'PSA (Perfect Sensitivity Approximation) — binary search 7 iterasi. Tiap iterasi: uji 2 nilai sens (35% dan 65% dari range), bandingkan skor, persempit range ke arah pemenang. Adaptasi dari metode komunitas dengan lingkungan 3D Three.js.' +
+      '</div>';
+
+    document.getElementById('sf-copy-btn').addEventListener('click', function(){
+      navigator.clipboard.writeText(optimal.toFixed(4).toString()).catch(function(){});
+    });
+
+    document.getElementById('sf-restart-btn').addEventListener('click', function(){
+      cleanupTest();
+      if (state.renderer) {
+        cancelAnimationFrame(state.animId);
+        state.renderer.domElement.remove();
+        state.renderer.dispose();
+        state.renderer = null;
+      }
+      state.screen = 'setup';
+      render();
+    });
+  }
+
+  function init(){
+    root.hidden = false;
+    loader.classList.add('hidden');
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
