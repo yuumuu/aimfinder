@@ -4,210 +4,298 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>AimFinder — Pilih Versi Sens Finder</title>
-<meta name="description" content="Landing page AimFinder. Pilih 10 varian Sens Finder 3D: PSA, Continuous AI, Valorant theme, Calibration Lab, dan prototype.">
-<meta name="theme-color" content="#0a0d11">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0d11'/><circle cx='16' cy='16' r='8' fill='none' stroke='%23e8a33d' stroke-width='2'/><circle cx='16' cy='16' r='2' fill='%23e8a33d'/></svg>">
+<meta name="description" content="Landing page AimFinder. Pilih 10 varian Sens Finder: PSA, Continuous AI, Valorant theme, Calibration Lab, dan prototype.">
+<meta name="theme-color" content="#0c0c0c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230c0c0c'/><path d='M8 16 L24 16 M16 8 L16 24' stroke='%23ffb000' stroke-width='2'/><circle cx='16' cy='16' r='7' fill='none' stroke='%23ffb000' stroke-width='1.5'/></svg>">
+<link rel="stylesheet" href="https://cdn.hugeicons.com/font/hgi-stroke-rounded.css">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg:#0a0d11;--bg2:#0d1116;--panel:#12161c;--panel2:#171c24;--line:#232a34;--line2:#2c3441;
---text:#e6e9ee;--text2:#b8c0cc;--muted:#7c8797;--accent:#e8a33d;--teal:#45d6c4;--red:#ff5d5d;--green:#4ade80;
---mono:ui-monospace,'JetBrains Mono',Consolas,Menlo,monospace;
---sans:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',system-ui,sans-serif;
---r:14px;
+  --bg:#0c0c0c;--bg-1:#111111;--bg-2:#161616;--bg-3:#1e1e1e;
+  --line:#242424;--line-2:#333333;--line-3:#4a4a4a;
+  --text:#f0f0f0;
+  --text-2:#bfbfbf;
+  --text-3:#909090;
+  --text-4:#6e6e6e;
+  --amber:#ffb000;--amber-d:#7a5400;--teal:#5eead4;
+  --red:#ff6b6b;--green:#5eeaa0;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;
+  --r:2px;
 }
-html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100%}
-body{display:flex;flex-direction:column}
+html,body{width:100%;background:var(--bg)}
+body{color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;display:flex;flex-direction:column;position:relative;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px);background-size:32px 32px;background-position:-1px -1px}
 a{color:inherit}
-.wrap{max-width:1180px;width:100%;margin:0 auto;padding:0 20px}
-header.top{position:sticky;top:0;z-index:20;background:rgba(10,13,17,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.top-inner{display:flex;align-items:center;justify-content:space-between;height:60px}
+i.hgi-stroke{font-style:normal;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.wrap{max-width:1180px;width:100%;margin:0 auto;padding:0 20px;position:relative;z-index:1}
+/* HEADER — ala sens.html .hdr */
+.hdr{flex-shrink:0;position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;background:var(--bg-1);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none}
-.mark{width:32px;height:32px;border-radius:8px;background:rgba(232,163,61,.12);border:1px solid rgba(232,163,61,.35);display:flex;align-items:center;justify-content:center;color:var(--accent);font-family:var(--mono);font-weight:700}
-.brand b{font-family:var(--mono);letter-spacing:2.5px;font-size:14px;color:var(--accent)}
-.brand small{display:block;font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:400}
-nav.links{display:flex;gap:10px;align-items:center}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);text-decoration:none;font-size:13px;transition:.15s;cursor:pointer}
-.btn:hover{background:var(--panel2);border-color:var(--line2)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#14100a;font-weight:700}
-.btn.primary:hover{filter:brightness(1.08)}
-.hero{padding:48px 0 20px}
-.kicker{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:12px}
-h1{font-size:clamp(28px,4vw,44px);line-height:1.05;letter-spacing:-.02em;margin-bottom:12px}
-h1 span{color:var(--accent)}
-.lead{color:var(--text2);font-size:15px;line-height:1.7;max-width:760px}
-.stats{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 6px}
-.stat{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 14px;font-family:var(--mono);font-size:12px;color:var(--text2)}
-.stat b{color:var(--text)}
-.toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0;align-items:center}
-.search{flex:1;min-width:220px;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.search input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:14px}
-.filters{display:flex;flex-wrap:wrap;gap:8px}
-.chip{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
-.chip.active{background:var(--accent);border-color:var(--accent);color:#14100a;font-weight:700}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;padding-bottom:10px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:12px;transition:.15s}
-.card:hover{border-color:var(--line2);transform:translateY(-2px)}
-.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.num{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px}
-.badge{font-family:var(--mono);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;padding:5px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--text2);white-space:nowrap}
-.badge.psa{border-color:rgba(232,163,61,.5);color:var(--accent);background:rgba(232,163,61,.1)}
-.badge.ai{border-color:rgba(69,214,196,.5);color:var(--teal);background:rgba(69,214,196,.08)}
-.badge.valo{border-color:rgba(255,70,85,.6);color:#ff8a94;background:rgba(255,70,85,.1)}
-.badge.lab{border-color:rgba(255,176,0,.5);color:#ffb000;background:rgba(255,176,0,.08)}
-.badge.proto{border-color:var(--line2);color:var(--muted)}
-.card h2{font-size:18px;letter-spacing:-.01em}
-.card h2 code{font-family:var(--mono);font-size:15px;color:var(--accent);background:rgba(232,163,61,.1);padding:2px 6px;border-radius:6px}
-.card p{font-size:13.5px;line-height:1.65;color:var(--text2)}
-.meta{display:flex;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
-.meta span{border:1px solid var(--line);padding:4px 8px;border-radius:6px;background:var(--bg2)}
-.actions{display:flex;gap:10px;margin-top:auto;padding-top:6px}
-.actions .btn{flex:1;justify-content:center}
-.how{margin:28px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-.how .box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
-.box h3{font-family:var(--mono);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
-.box p,.box li{font-size:13.5px;line-height:1.7;color:var(--text2)}
-.box ol,.box ul{padding-left:18px;display:flex;flex-direction:column;gap:6px}
-.empty{border:1px dashed var(--line2);border-radius:var(--r);padding:28px;text-align:center;color:var(--muted);display:none}
-footer{margin-top:auto;border-top:1px solid var(--line);padding:22px 0;color:var(--muted);font-size:12.5px}
-footer .wrap{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
-footer a{color:var(--text2)}
-@media(max-width:640px){.top-inner{height:auto;padding:12px 0;flex-direction:column;gap:10px}h1{font-size:30px}}
+.brand-mark{width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--amber);font-size:20px}
+.brand-name{font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text);font-family:var(--mono)}
+.brand-sub{font-size:9px;letter-spacing:2px;color:var(--text-3);text-transform:uppercase;margin-top:1px;font-family:var(--mono)}
+.hdr-actions{display:flex;gap:6px;align-items:center}
+/* BUTTONS — ala sens.html .btn */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--amber);color:#1a1305;border:1px solid var(--amber);padding:9px 16px;border-radius:var(--r);font-family:var(--mono);font-weight:700;font-size:11px;cursor:pointer;letter-spacing:1.5px;text-transform:uppercase;transition:all .1s;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#ffc233;border-color:#ffc233}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--text-2);border:1px solid var(--line-2)}
+.btn.ghost:hover{background:var(--bg-2);color:var(--text);border-color:var(--line-3)}
+.btn.sm{padding:6px 11px;font-size:10px;letter-spacing:1.2px}
+.btn .hgi-stroke{font-size:14px}
+/* HERO — ala sens.html .hero */
+.hero{display:flex;flex-direction:column;gap:4px;padding:24px 0 16px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.hero-title{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:2px;line-height:1.1;text-transform:uppercase;color:var(--text)}
+.hero-title .grad{color:var(--amber)}
+.hero-sub{font-family:var(--mono);color:var(--text-2);font-size:11.5px;line-height:1.7;max-width:800px;letter-spacing:.2px;margin-top:8px}
+.hero-sub strong{color:var(--text);font-weight:700}
+.hero-sub code{background:var(--bg-2);padding:2px 6px;border:1px solid var(--line);color:var(--amber);font-size:11px}
+/* STATS — ala sens.html .stat-grid */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);margin:16px 0 0;border:1px solid var(--line)}
+.stat{background:var(--bg-1);padding:14px;display:flex;flex-direction:column;gap:4px}
+.stat-label{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-3);font-weight:700}
+.stat-value{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:-.3px;color:var(--text)}
+.stat-value.amber{color:var(--amber)}
+.stat-sub{font-family:var(--mono);font-size:10px;color:var(--text-2);margin-top:2px;letter-spacing:.3px}
+/* TOOLBAR */
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0;align-items:stretch}
+.search{flex:1;min-width:220px;display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);color:var(--text);padding:9px 11px;border-radius:var(--r);font-family:var(--mono);font-size:13px}
+.search .hgi-stroke{color:var(--text-3);font-size:15px;flex-shrink:0}
+.search input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:var(--mono);font-size:13px;letter-spacing:.3px;min-width:0}
+.search input::placeholder{color:var(--text-4)}
+.search:focus-within{border-color:var(--amber)}
+.toggles{display:flex;gap:6px;flex-wrap:wrap}
+.tgl{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;background:var(--bg);border:1px solid var(--line);color:var(--text-3);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .12s;user-select:none;border-radius:var(--r)}
+.tgl:hover{color:var(--text);border-color:var(--line-2)}
+.tgl.active{background:var(--bg-2);border-color:var(--line-2);color:var(--amber)}
+.tgl-dot{width:6px;height:6px;background:var(--text-3);transition:all .12s;flex-shrink:0}
+.tgl.active .tgl-dot{background:var(--amber)}
+/* CARDS — ala sens.html .panel */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;padding:16px 0 6px}
+.card{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden;transition:border-color .12s}
+.card:hover{border-color:var(--line-2)}
+.card-hdr{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--bg-2)}
+.card-hdr .hgi-stroke{color:var(--amber);font-size:15px;flex-shrink:0}
+.card-file{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text)}
+.card-num{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap}
+.card-body{padding:14px;display:flex;flex-direction:column;gap:10px;flex:1}
+.card h2{font-size:16px;letter-spacing:-.01em;color:var(--text);font-weight:700}
+.card p{font-size:12.5px;line-height:1.65;color:var(--text-2)}
+.badge-row{display:flex;gap:6px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:transparent;border:1px solid var(--line-2);color:var(--text-2);font-family:var(--mono);font-size:10px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-radius:var(--r)}
+.badge .hgi-stroke{font-size:12px}
+.badge.gold{border-color:var(--amber);color:var(--amber)}
+.badge.teal{border-color:#1d4a44;color:var(--teal)}
+.badge.red{border-color:#5a1e1e;color:var(--red)}
+.meta{display:flex;flex-wrap:wrap;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--text-3)}
+.meta span{border:1px solid var(--line);padding:4px 8px;background:var(--bg);letter-spacing:.3px}
+.card-actions{display:flex;gap:6px;margin-top:auto;padding-top:4px}
+.card-actions .btn{flex:1}
+/* LATEST — border khusus ala sens.html .recommend */
+.card.latest{border:1px solid var(--line-2);border-left:3px solid var(--amber)}
+.card.latest .card-hdr{background:var(--bg-2)}
+.latest-note{display:flex;gap:10px;align-items:flex-start;background:rgba(255,176,0,.05);border:1px solid var(--line);border-left:2px solid var(--amber);border-radius:var(--r);padding:10px 12px;font-size:11.5px;line-height:1.6;color:var(--text-2)}
+.latest-note .hgi-stroke{color:var(--amber);flex-shrink:0;margin-top:1px;font-size:14px}
+/* HOW — panels */
+.how{margin:16px 0 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.panel{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden}
+.panel-hdr{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--bg-2)}
+.panel-hdr .hgi-stroke{color:var(--amber);font-size:15px}
+.panel-title{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text)}
+.panel-body{padding:14px;display:flex;flex-direction:column;gap:8px}
+.panel-body p,.panel-body li{font-size:12.5px;line-height:1.7;color:var(--text-2)}
+.panel-body ol,.panel-body ul{padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.panel-body b,.panel-body strong{color:var(--text)}
+.panel-body a{color:var(--amber)}
+.panel-body code{background:var(--bg-2);padding:2px 6px;border:1px solid var(--line);color:var(--amber);font-size:11px;font-family:var(--mono)}
+.empty{border:1px dashed var(--line-2);padding:28px;text-align:center;color:var(--text-3);display:none;font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
+footer{margin-top:auto;border-top:1px solid var(--line);padding:16px 0;color:var(--text-3);font-size:11px;background:var(--bg-1);position:relative;z-index:1}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;font-family:var(--mono);letter-spacing:.5px}
+footer a{color:var(--text-2);text-decoration:none}
+footer a:hover{color:var(--amber)}
+@media(max-width:900px){
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .hero-title{font-size:18px;letter-spacing:1px}
+  .hdr{padding:0 12px}
+  .hdr .btn span.txt{display:none}
+  .hdr .btn{padding:9px 11px}
+}
 </style>
 </head>
 <body>
-<header class="top">
-<div class="wrap top-inner">
-<a class="brand" href="./index.html"><span class="mark">◎</span><span><b>AIMFINDER</b><small>SENS FINDER COLLECTION</small></span></a>
-<nav class="links">
-<a class="btn" href="./docs.html">📖 Docs</a>
-<a class="btn" href="https://github.com/yuumuu/aimfinder" target="_blank" rel="noopener">GitHub</a>
-<a class="btn primary" href="https://aimfinder.wasmer.app" target="_blank" rel="noopener">Live ↗</a>
-</nav>
-</div>
+<header class="hdr">
+  <a class="brand" href="./index.html">
+    <span class="brand-mark"><i class="hgi-stroke hgi-target-03"></i></span>
+    <span><span class="brand-name">AimFinder</span><span class="brand-sub" style="display:block">Sens Finder Collection</span></span>
+  </a>
+  <nav class="hdr-actions">
+    <a class="btn ghost sm" href="./docs.html"><i class="hgi-stroke hgi-book-open-01"></i><span class="txt">Docs</span></a>
+    <a class="btn ghost sm" href="https://github.com/yuumuu/aimfinder" target="_blank" rel="noopener"><i class="hgi-stroke hgi-github-01"></i><span class="txt">GitHub</span></a>
+    <a class="btn sm" href="https://aimfinder.wasmer.app" target="_blank" rel="noopener"><i class="hgi-stroke hgi-arrow-up-right-01"></i><span class="txt">Live</span></a>
+  </nav>
 </header>
 
 <main class="wrap">
-<section class="hero">
-<div class="kicker">Wasmer Edge • Static • Three.js • Pointer Lock</div>
-<h1>Pilih versi <span>AimFinder</span> favoritmu.</h1>
-<p class="lead">Landing page ini tidak mengubah 10 file di <code style="font-family:var(--mono)">public/</code>. Semua varian tetap apa adanya — pilih salah satu untuk mulai kalibrasi sensitivitas VALORANT / CS2 / FPS lewat uji aim 3D di browser.</p>
-<div class="stats">
-<div class="stat"><b>10</b> varian</div>
-<div class="stat"><b>3</b> keluarga: PSA • Continuous AI • Calibration Lab</div>
-<div class="stat">+ <b>VALORANT theme</b> &amp; prototype</div>
-<div class="stat">Deploy: <b>aimfinder.wasmer.app</b></div>
-</div>
-<div class="toolbar">
-<div class="search"><span>🔎</span><input id="q" type="search" placeholder="Cari: psa, ai, valo, lab, gpt…" autocomplete="off"></div>
-<div class="filters" id="filters">
-<button class="chip active" data-f="all">All</button>
-<button class="chip" data-f="psa">PSA</button>
-<button class="chip" data-f="ai">Continuous AI</button>
-<button class="chip" data-f="valo">Valorant</button>
-<button class="chip" data-f="lab">Lab</button>
-<button class="chip" data-f="proto">Prototype</button>
-</div>
-</div>
-</section>
+  <section class="hero">
+    <h1 class="hero-title">Pilih versi <span class="grad">AimFinder</span></h1>
+    <p class="hero-sub">Landing ini <strong>tidak mengubah</strong> 10 file di <code>public/</code>. Urutan <strong>terbaru dulu</strong> — mulai dari <code>sens.html</code> kecuali butuh varian spesifik.</p>
+    <div class="stat-grid">
+      <div class="stat"><span class="stat-label">Varian</span><span class="stat-value">10</span><span class="stat-sub">file frozen</span></div>
+      <div class="stat"><span class="stat-label">Terbaru</span><span class="stat-value amber">sens.html</span><span class="stat-sub">contrast fix</span></div>
+      <div class="stat"><span class="stat-label">Keluarga</span><span class="stat-value">5</span><span class="stat-sub">PSA / AI / Valo / Lab / Proto</span></div>
+      <div class="stat"><span class="stat-label">Live</span><span class="stat-value" style="font-size:15px">wasmer.app</span><span class="stat-sub">aimfinder.wasmer.app</span></div>
+    </div>
+    <div class="toolbar">
+      <label class="search"><i class="hgi-stroke hgi-search-01"></i><input id="q" type="search" placeholder="Cari: psa, ai, valo, lab, gpt..." autocomplete="off" aria-label="Cari versi"></label>
+      <div class="toggles" id="filters" role="tablist" aria-label="Filter keluarga">
+        <button class="tgl active" data-f="all"><span class="tgl-dot"></span>All</button>
+        <button class="tgl" data-f="psa"><span class="tgl-dot"></span>PSA</button>
+        <button class="tgl" data-f="ai"><span class="tgl-dot"></span>AI</button>
+        <button class="tgl" data-f="valo"><span class="tgl-dot"></span>Valo</button>
+        <button class="tgl" data-f="lab"><span class="tgl-dot"></span>Lab</button>
+        <button class="tgl" data-f="proto"><span class="tgl-dot"></span>Proto</button>
+      </div>
+    </div>
+  </section>
 
-<section class="grid" id="grid">
-<!-- 1 -->
-<article class="card" data-tags="psa" data-name="chat psa binary search flick tracking">
-<div class="card-top"><span class="num">01 / logs.txt</span><span class="badge psa">PSA</span></div>
-<h2><code>chat.html</code> — PSA Sensitivity Tool</h2>
-<p>Uji PSA binary-search klasik. Flick + tracking 3D dengan Three.js, cocok untuk baseline cepat sebelum masuk varian AI.</p>
-<div class="meta"><span>743 lines</span><span>31 KB</span><span>VALORANT &amp; CS2</span></div>
-<div class="actions"><a class="btn primary" href="./chat.html">Buka →</a><a class="btn" href="./docs.html#chat">Docs</a></div>
-</article>
-<!-- 2 -->
-<article class="card" data-tags="psa" data-name="play psa binary search">
-<div class="card-top"><span class="num">02 / logs.txt</span><span class="badge psa">PSA</span></div>
-<h2><code>play.html</code> — PSA Sensitivity Tool</h2>
-<p>Varian PSA yang sama dengan struktur embed-friendly (min-height 560px). Alternatif <code>chat.html</code> untuk di-iframe.</p>
-<div class="meta"><span>742 lines</span><span>31 KB</span><span>embed</span></div>
-<div class="actions"><a class="btn primary" href="./play.html">Buka →</a><a class="btn" href="./docs.html#play">Docs</a></div>
-</article>
-<!-- 3 -->
-<article class="card" data-tags="proto ai" data-name="gpt ai aim optimizer v3 prototype minimal">
-<div class="card-top"><span class="num">03 / logs.txt</span><span class="badge proto">PROTOTYPE</span></div>
-<h2><code>gpt.html</code> — AI Aim Optimizer V3</h2>
-<p>Prototype minimal 255 baris: Start AI Training, trajectory + angular velocity tracking. Untuk belajar logika sebelum versi full.</p>
-<div class="meta"><span>255 lines</span><span>6 KB</span><span>minimal</span></div>
-<div class="actions"><a class="btn primary" href="./gpt.html">Buka →</a><a class="btn" href="./docs.html#gpt">Docs</a></div>
-</article>
-<!-- 4 -->
-<article class="card" data-tags="ai" data-name="deep continuous ai optimizer">
-<div class="card-top"><span class="num">04 / logs.txt</span><span class="badge ai">CONTINUOUS AI</span></div>
-<h2><code>deep.html</code> — Continuous AI Optimizer</h2>
-<p>Generasi awal Continuous AI: optimasi sensitivitas berjalan terus selama trial, bukan sekali di akhir seperti PSA.</p>
-<div class="meta"><span>1317 lines</span><span>54 KB</span><span>three.js</span></div>
-<div class="actions"><a class="btn primary" href="./deep.html">Buka →</a><a class="btn" href="./docs.html#deep">Docs</a></div>
-</article>
-<!-- 5 -->
-<article class="card" data-tags="ai" data-name="seek fullscreen continuous ai">
-<div class="card-top"><span class="num">05 / logs.txt</span><span class="badge ai">CONTINUOUS AI</span></div>
-<h2><code>seek.html</code> — Fullscreen Continuous AI</h2>
-<p>Layout fullscreen 100dvh, 2300 baris. HUD + loader + variabel responsif untuk sesi kalibrasi panjang.</p>
-<div class="meta"><span>2300 lines</span><span>94 KB</span><span>fullscreen</span></div>
-<div class="actions"><a class="btn primary" href="./seek.html">Buka →</a><a class="btn" href="./docs.html#seek">Docs</a></div>
-</article>
-<!-- 6 -->
-<article class="card" data-tags="ai" data-name="aim continuous ai variant">
-<div class="card-top"><span class="num">06 / logs.txt</span><span class="badge ai">CONTINUOUS AI</span></div>
-<h2><code>aim.html</code> — Continuous AI Variant</h2>
-<p>Varian Continuous AI yang lebih ramping (2013 baris). Titik tengah evolusi seek → finder.</p>
-<div class="meta"><span>2013 lines</span><span>96 KB</span><span>variant</span></div>
-<div class="actions"><a class="btn primary" href="./aim.html">Buka →</a><a class="btn" href="./docs.html#aim">Docs</a></div>
-</article>
-<!-- 7 -->
-<article class="card" data-tags="ai" data-name="finder full layout continuous ai">
-<div class="card-top"><span class="num">07 / logs.txt</span><span class="badge ai">CONTINUOUS AI</span></div>
-<h2><code>finder.html</code> — Full Layout Optimizer</h2>
-<p>Versi paling lengkap keluarga AI (2686 baris, 138 KB): container 1180px, kartu, header-actions, scroll-body.</p>
-<div class="meta"><span>2686 lines</span><span>138 KB</span><span>flagship AI</span></div>
-<div class="actions"><a class="btn primary" href="./finder.html">Buka →</a><a class="btn" href="./docs.html#finder">Docs</a></div>
-</article>
-<!-- 8 -->
-<article class="card" data-tags="ai valo" data-name="valo valorant theme red teal">
-<div class="card-top"><span class="num">08 / logs.txt</span><span class="badge valo">VALORANT</span></div>
-<h2><code>valo.html</code> — Valorant-Themed Optimizer</h2>
-<p>Theme VALORANT (#0f1923, merah #ff4655, teal). 2822 baris — file terbesar, nuansa Tungsten/Oswald untuk vibes in-game.</p>
-<div class="meta"><span>2822 lines</span><span>140 KB</span><span>valo theme</span></div>
-<div class="actions"><a class="btn primary" href="./valo.html">Buka →</a><a class="btn" href="./docs.html#valo">Docs</a></div>
-</article>
-<!-- 9 -->
-<article class="card" data-tags="lab" data-name="rant calibration lab amber dark">
-<div class="card-top"><span class="num">09 / logs.txt</span><span class="badge lab">LAB</span></div>
-<h2><code>rant.html</code> — Sensitivity Calibration Lab</h2>
-<p>Lab amber (#ffb000) di atas #0c0c0c dengan grid background + tabbar. Pendekatan lab ketimbang wizard.</p>
-<div class="meta"><span>1858 lines</span><span>137 KB</span><span>lab</span></div>
-<div class="actions"><a class="btn primary" href="./rant.html">Buka →</a><a class="btn" href="./docs.html#rant">Docs</a></div>
-</article>
-<!-- 10 -->
-<article class="card" data-tags="lab" data-name="sens calibration lab contrast fix terbaru">
-<div class="card-top"><span class="num">10 / logs.txt</span><span class="badge lab">LAB • LATEST</span></div>
-<h2><code>sens.html</code> — Calibration Lab (contrast fix)</h2>
-<p>Iterasi terbaru Lab: perbaikan kontras teks (11:1 / 7.5:1 / 5:1). Rekomendasi default jika bingung pilih.</p>
-<div class="meta"><span>1860 lines</span><span>145 KB</span><span>recommended</span></div>
-<div class="actions"><a class="btn primary" href="./sens.html">Buka →</a><a class="btn" href="./docs.html#sens">Docs</a></div>
-</article>
-</section>
-<div class="empty" id="empty">Tidak ada hasil. Coba kata kunci lain.</div>
+  <section class="grid" id="grid">
+    <!-- 10 — TERBARU -->
+    <article class="card latest" data-tags="lab" data-name="sens calibration lab contrast fix terbaru">
+      <div class="card-hdr"><i class="hgi-stroke hgi-crown-01"></i><span class="card-file">sens.html</span><span class="card-num">10 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge gold"><i class="hgi-stroke hgi-crown-01"></i>Latest</span><span class="badge">Lab</span></div>
+        <h2>Calibration Lab (contrast fix)</h2>
+        <p>Iterasi terbaru Lab: perbaikan kontras teks (11:1 / 7.5:1 / 5:1). Rekomendasi default jika bingung pilih.</p>
+        <div class="latest-note"><i class="hgi-stroke hgi-checkmark-badge-01"></i><span>Rilis terbaru — mulai dari sini, lalu bandingkan dengan <strong>finder.html</strong>.</span></div>
+        <div class="meta"><span>1860 lines</span><span>145 KB</span><span>recommended</span></div>
+        <div class="card-actions"><a class="btn" href="./sens.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#sens"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+    <!-- 09 -->
+    <article class="card" data-tags="lab" data-name="rant calibration lab amber dark">
+      <div class="card-hdr"><i class="hgi-stroke hgi-flask"></i><span class="card-file">rant.html</span><span class="card-num">09 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge">Lab</span></div>
+        <h2>Sensitivity Calibration Lab</h2>
+        <p>Lab amber (#ffb000) di atas #0c0c0c dengan grid background dan tabbar. Pendekatan lab ketimbang wizard.</p>
+        <div class="meta"><span>1858 lines</span><span>137 KB</span><span>lab</span></div>
+        <div class="card-actions"><a class="btn" href="./rant.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#rant"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+    <!-- 08 -->
+    <article class="card" data-tags="ai valo" data-name="valo valorant theme red teal">
+      <div class="card-hdr"><i class="hgi-stroke hgi-game-controller-01"></i><span class="card-file">valo.html</span><span class="card-num">08 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge red">Valorant</span><span class="badge teal">AI</span></div>
+        <h2>Valorant-Themed Optimizer</h2>
+        <p>Theme VALORANT (#0f1923, merah #ff4655, teal). 2822 baris — file terbesar, nuansa in-game.</p>
+        <div class="meta"><span>2822 lines</span><span>140 KB</span><span>valo theme</span></div>
+        <div class="card-actions"><a class="btn" href="./valo.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#valo"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+    <!-- 07 -->
+    <article class="card" data-tags="ai" data-name="finder full layout continuous ai">
+      <div class="card-hdr"><i class="hgi-stroke hgi-cpu"></i><span class="card-file">finder.html</span><span class="card-num">07 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge teal">Continuous AI</span></div>
+        <h2>Full Layout Optimizer</h2>
+        <p>Versi paling lengkap keluarga AI (2686 baris, 138 KB): container 1180px, kartu, header-actions, scroll-body.</p>
+        <div class="meta"><span>2686 lines</span><span>138 KB</span><span>flagship AI</span></div>
+        <div class="card-actions"><a class="btn" href="./finder.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#finder"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+    <!-- 06 -->
+    <article class="card" data-tags="ai" data-name="aim continuous ai variant">
+      <div class="card-hdr"><i class="hgi-stroke hgi-cpu"></i><span class="card-file">aim.html</span><span class="card-num">06 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge teal">Continuous AI</span></div>
+        <h2>Continuous AI Variant</h2>
+        <p>Varian Continuous AI yang lebih ramping (2013 baris). Titik tengah evolusi seek ke finder.</p>
+        <div class="meta"><span>2013 lines</span><span>96 KB</span><span>variant</span></div>
+        <div class="card-actions"><a class="btn" href="./aim.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#aim"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+    <!-- 05 -->
+    <article class="card" data-tags="ai" data-name="seek fullscreen continuous ai">
+      <div class="card-hdr"><i class="hgi-stroke hgi-cpu"></i><span class="card-file">seek.html</span><span class="card-num">05 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge teal">Continuous AI</span></div>
+        <h2>Fullscreen Continuous AI</h2>
+        <p>Layout fullscreen 100dvh, 2300 baris. HUD dan loader untuk sesi kalibrasi panjang.</p>
+        <div class="meta"><span>2300 lines</span><span>94 KB</span><span>fullscreen</span></div>
+        <div class="card-actions"><a class="btn" href="./seek.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#seek"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+    <!-- 04 -->
+    <article class="card" data-tags="ai" data-name="deep continuous ai optimizer">
+      <div class="card-hdr"><i class="hgi-stroke hgi-cpu"></i><span class="card-file">deep.html</span><span class="card-num">04 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge teal">Continuous AI</span></div>
+        <h2>Continuous AI Optimizer</h2>
+        <p>Generasi awal Continuous AI: optimasi sensitivitas berjalan terus selama trial, bukan sekali di akhir seperti PSA.</p>
+        <div class="meta"><span>1317 lines</span><span>54 KB</span><span>three.js</span></div>
+        <div class="card-actions"><a class="btn" href="./deep.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#deep"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+    <!-- 03 -->
+    <article class="card" data-tags="proto ai" data-name="gpt ai aim optimizer v3 prototype minimal">
+      <div class="card-hdr"><i class="hgi-stroke hgi-layers-01"></i><span class="card-file">gpt.html</span><span class="card-num">03 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge">Prototype</span></div>
+        <h2>AI Aim Optimizer V3</h2>
+        <p>Prototype minimal 255 baris: Start AI Training, trajectory dan angular velocity tracking. Untuk belajar logika sebelum versi full.</p>
+        <div class="meta"><span>255 lines</span><span>6 KB</span><span>minimal</span></div>
+        <div class="card-actions"><a class="btn" href="./gpt.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#gpt"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+    <!-- 02 -->
+    <article class="card" data-tags="psa" data-name="play psa binary search">
+      <div class="card-hdr"><i class="hgi-stroke hgi-target-03"></i><span class="card-file">play.html</span><span class="card-num">02 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge gold">PSA</span></div>
+        <h2>PSA Sensitivity Tool</h2>
+        <p>Varian PSA yang sama dengan struktur embed-friendly (min-height 560px). Alternatif <code style="background:var(--bg-2);padding:2px 6px;border:1px solid var(--line);color:var(--amber);font-size:11px;font-family:var(--mono)">chat.html</code> untuk di-iframe.</p>
+        <div class="meta"><span>742 lines</span><span>31 KB</span><span>embed</span></div>
+        <div class="card-actions"><a class="btn" href="./play.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#play"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+    <!-- 01 -->
+    <article class="card" data-tags="psa" data-name="chat psa binary search flick tracking">
+      <div class="card-hdr"><i class="hgi-stroke hgi-target-03"></i><span class="card-file">chat.html</span><span class="card-num">01 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge gold">PSA</span></div>
+        <h2>PSA Sensitivity Tool</h2>
+        <p>Uji PSA binary-search klasik. Flick dan tracking 3D dengan Three.js, cocok untuk baseline cepat sebelum masuk varian AI.</p>
+        <div class="meta"><span>743 lines</span><span>31 KB</span><span>VALORANT dan CS2</span></div>
+        <div class="card-actions"><a class="btn" href="./chat.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#chat"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
+      </div>
+    </article>
+  </section>
+  <div class="empty" id="empty">Tidak ada hasil. Coba kata kunci lain.</div>
 
-<section class="how">
-<div class="box"><h3>🚀 Mulai cepat</h3><ol><li>Buka salah satu varian di atas (coba <b>sens.html</b> dulu).</li><li>Klik canvas → izinkan <b>Pointer Lock</b>.</li><li>Selesaikan Flick / Tracking / Switching.</li><li>Catat rekomendasi sens + DPI.</li></ol></div>
-<div class="box"><h3>🧭 Bingung pilih?</h3><ul><li><b>Pemula:</b> sens.html → finder.html</li><li><b>Baseline cepat:</b> chat.html / play.html (PSA)</li><li><b>Vibes VALO:</b> valo.html</li><li><b>Ngoprek:</b> gpt.html (6 KB)</li></ul></div>
-<div class="box"><h3>📖 Butuh detail?</h3><p>Buka <a href="./docs.html" style="color:var(--accent)">docs.html</a> untuk metodologi PSA vs Continuous AI, tabel DPI, rumus skor, requirement browser, struktur proyek, deploy Wasmer Edge, dan FAQ.</p></div>
-</section>
+  <section class="how">
+    <div class="panel">
+      <div class="panel-hdr"><i class="hgi-stroke hgi-play"></i><span class="panel-title">Mulai cepat</span></div>
+      <div class="panel-body"><ol><li>Buka salah satu varian di atas (coba <strong>sens.html</strong> dulu).</li><li>Klik canvas, izinkan <strong>Pointer Lock</strong>.</li><li>Selesaikan Flick / Tracking / Switching.</li><li>Catat rekomendasi sens dan DPI.</li></ol></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr"><i class="hgi-stroke hgi-compass-01"></i><span class="panel-title">Bingung pilih</span></div>
+      <div class="panel-body"><ul><li><strong>Pemula:</strong> sens.html ke finder.html</li><li><strong>Baseline cepat:</strong> chat.html / play.html (PSA)</li><li><strong>Vibes VALO:</strong> valo.html</li><li><strong>Ngoprek:</strong> gpt.html (6 KB)</li></ul></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr"><i class="hgi-stroke hgi-book-open-01"></i><span class="panel-title">Butuh detail</span></div>
+      <div class="panel-body"><p>Buka <a href="./docs.html">docs.html</a> untuk metodologi PSA vs Continuous AI, tabel DPI, rumus skor, requirement browser, struktur proyek, deploy Wasmer Edge, dan FAQ.</p></div>
+    </div>
+  </section>
 </main>
 
-<footer><div class="wrap"><span>© 2026 AimFinder • MIT • <a href="./docs.html">Docs</a> • <a href="https://aimfinder.wasmer.app">aimfinder.wasmer.app</a></span><span style="font-family:var(--mono)">public/index.html • landing only</span></div></footer>
+<footer><div class="wrap"><span>© 2026 AIMFINDER • MIT • <a href="./docs.html">DOCS</a> • <a href="https://aimfinder.wasmer.app">AIMFINDER.WASMER.APP</a></span><span>PUBLIC/INDEX.HTML • LANDING ONLY</span></div></footer>
 
 <script>
-const q=document.getElementById('q'),chips=[...document.querySelectorAll('.chip')],cards=[...document.querySelectorAll('.card')],empty=document.getElementById('empty');
+const q=document.getElementById('q'),tgls=[...document.querySelectorAll('.tgl')],cards=[...document.querySelectorAll('.card')],empty=document.getElementById('empty');
 let f='all';
-chips.forEach(c=>c.addEventListener('click',()=>{chips.forEach(x=>x.classList.remove('active'));c.classList.add('active');f=c.dataset.f;apply();}));
+tgls.forEach(c=>c.addEventListener('click',()=>{tgls.forEach(x=>x.classList.remove('active'));c.classList.add('active');f=c.dataset.f;apply();}));
 q.addEventListener('input',apply);
 function apply(){
 const s=q.value.toLowerCase().trim();let n=0;
