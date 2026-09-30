@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - status "Loading":
+    - generic: Sens Finder 3D
+    - generic: Loading PSA engine…
+  - generic [ref=e2]:
+    - generic [ref=e3]: SENS://FINDER 3D
+    - main [ref=e5]:
+      - generic [ref=e6]: PSA Sensitivity Finder 3D
+      - generic [ref=e7]: "Temukan sensitivitas optimalmu dengan algoritma PSA (Perfect Sensitivity Approximation) — binary search 7 iterasi. Tiap iterasi menguji 2 nilai sens via aim test 3D otomatis, lalu mempersempit range berdasarkan skor performa. Hasil: rekomendasi sens berbasis data, bukan tebakan."
+      - generic [ref=e8]:
+        - generic [ref=e9]: Pilih Game
+        - generic [ref=e10]:
+          - generic [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: ▼ VALORANT
+            - generic [ref=e13]: Yaw 0.07 · Pro avg 280 eDPI
+          - generic [ref=e14] [cursor=pointer]:
+            - generic [ref=e15]: ⬤ CS2
+            - generic [ref=e16]: Yaw 0.022 · Pro avg 880 eDPI
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]: Mouse DPI
+          - spinbutton "Mouse DPI" [ref=e20]: "800"
+        - generic [ref=e21]:
+          - generic [ref=e22]: Sens yang biasa kamu pakai
+          - spinbutton "Sens yang biasa kamu pakai" [ref=e23]: "0.4"
+      - generic [ref=e24]:
+        - generic [ref=e25]: Info Tes
+        - generic [ref=e26]: "• 7 iterasi binary search × 2 tes per iterasi = 14 tes• Tiap tes: 12 detik aim test 3D — klik target yang muncul secepat & seakurat mungkin• Total estimasi: ~4 menit• Gunakan mouse, bukan touchpad. Pastikan kursor terkunci (pointer lock)."
+      - alert
+      - button "Mulai PSA Test →" [ref=e28] [cursor=pointer]
