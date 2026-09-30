@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sens Finder 3D — Continuous AI Sensitivity Optimizer</title>
+<meta name="description" content="Find your optimal mouse sensitivity for VALORANT & CS2 through 3D aim trials with continuous AI optimization.">
+<meta property="og:title" content="Sens Finder 3D — Continuous AI Sensitivity Optimizer">
+<meta property="og:description" content="Find your optimal mouse sensitivity through 3D aim trials with continuous AI optimization.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0d11">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0d11'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23e8a33d' font-family='monospace' font-weight='bold'>S</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  #sf-loader {
+    position: fixed; inset: 0; z-index: 999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    background: #0a0d11; color: #e6e9ee; font-family: 'Consolas', 'SFMono-Regular', 'Courier New', monospace;
+    transition: opacity .4s, visibility .4s;
+  }
+  #sf-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  #sf-loader .spinner {
+    width: 32px; height: 32px; border: 2px solid #232a34; border-top-color: #e8a33d;
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #sf-root {
+    --bg: #0a0d11;
+    --panel: #12161c;
+    --panel-2: #171c24;
+    --line: #232a34;
+    --text: #e6e9ee;
+    --muted: #7c8797;
+    --accent: #e8a33d;
+    --accent-2: #45d6c4;
+    --danger: #ff5d5d;
+    --mono: 'Consolas', 'SFMono-Regular', 'Courier New', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+  }
+  #sf-root * { box-sizing: border-box; }
+  .sf-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #10141a, #0d1116);
+  }
+  .sf-brand { font-family: var(--mono); font-weight: 700; letter-spacing: 2px; font-size: 13px; color: var(--accent); text-transform: uppercase; }
+  .sf-brand span { color: var(--muted); font-weight: 400; }
+  .sf-body { flex: 1; padding: 26px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+
+  .sf-title { font-size: 20px; font-weight: 700; letter-spacing: .3px; }
+  .sf-sub { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .sf-field { display: flex; flex-direction: column; gap: 6px; }
+  .sf-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); font-family: var(--mono); }
+  .sf-input {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    padding: 10px 12px; border-radius: 8px; font-family: var(--mono); font-size: 14px; outline: none;
+  }
+  .sf-input:focus { border-color: var(--accent); }
+  .sf-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sf-btn {
+    background: var(--accent); color: #1a1305; border: none; padding: 12px 22px; border-radius: 8px;
+    font-weight: 700; font-size: 13.5px; cursor: pointer; letter-spacing: .3px; font-family: var(--sans);
+    transition: transform .1s, filter .15s;
+  }
+  .sf-btn:hover { filter: brightness(1.08); }
+  .sf-btn:active { transform: scale(0.98); }
+  .sf-btn.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .sf-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .sf-btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: auto; padding-top: 10px; }
+  .sf-error { color: var(--danger); font-size: 12px; }
+
+  .sf-radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sf-radio {
+    border: 1px solid var(--line); background: var(--panel-2); padding: 12px 14px; border-radius: 10px;
+    cursor: pointer; flex: 1; min-width: 120px; transition: all .15s; text-align: center;
+  }
+  .sf-radio.selected { border-color: var(--accent); background: rgba(232,163,61,0.08); }
+  .sf-radio-title { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+  .sf-radio-desc { font-size: 11.5px; color: var(--muted); }
+
+  #scene-wrap {
+    position: relative; width: 100%; flex: 1; overflow: hidden; background: #05070a;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 400px; border: 1px solid var(--line); border-radius: 10px;
+  }
+  #scene-wrap canvas { display: block; width: 100%; height: 100%; cursor: none; }
+  #crosshair {
+    position: absolute; top: 50%; left: 50%; pointer-events: none; z-index: 10;
+    transform: translate(-50%, -50%);
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: #45d6c4;
+  }
+  #crosshair::before { width: 18px; height: 1.5px; top: -0.75px; left: -9px; }
+  #crosshair::after { width: 1.5px; height: 18px; top: -9px; left: -0.75px; }
+  #crosshair .dot {
+    width: 3px; height: 3px; background: #45d6c4; border-radius: 50%;
+    position: absolute; top: -1.5px; left: -1.5px;
+  }
+  #crosshair.miss::before, #crosshair.miss::after, #crosshair.miss .dot { background: #ff5d5d; }
+
+  .hud {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+    display: flex; justify-content: space-between; padding: 12px 16px;
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    pointer-events: none;
+  }
+  .hud b { color: var(--text); }
+  .hud .accent { color: var(--accent); }
+
+  #test-overlay {
+    position: absolute; inset: 0; z-index: 8;
+    background: rgba(5,7,10,0.9); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 20px;
+  }
+  #test-overlay.hidden { display: none; }
+  .test-round { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: 2px; }
+  .test-sens { font-size: 32px; font-weight: 700; font-family: var(--mono); }
+  .test-hint { color: var(--muted); font-size: 13px; max-width: 360px; line-height: 1.6; }
+  .test-countdown { font-size: 48px; font-weight: 700; color: var(--accent-2); font-family: var(--mono); }
+
+  .sf-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  .sf-table th, .sf-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+  .sf-table th { color: var(--muted); font-weight: 500; text-transform: uppercase; font-size: 10.5px; letter-spacing: .8px; }
+  .sf-table tr.best { background: rgba(69,214,196,0.06); }
+  .sf-table tr.best td:first-child { color: var(--accent-2); font-weight: 700; }
+
+  .sf-recommend {
+    border: 1px solid var(--accent); background: rgba(232,163,61,0.06); border-radius: 12px; padding: 18px 20px;
+  }
+  .sf-recommend .sf-label { color: var(--accent); }
+  .sf-recommend-value { font-family: var(--mono); font-size: 28px; font-weight: 700; margin: 4px 0; }
+  .sf-recommend-sub { font-size: 12.5px; color: var(--muted); }
+  .sf-warn { border: 1px solid #6b5420; background: rgba(232,163,61,0.06); padding: 10px 14px; border-radius: 8px; font-size: 12px; color: var(--accent); }
+
+  .sf-bars { display: flex; flex-direction: column; gap: 8px; }
+  .sf-bar-row { display: flex; align-items: center; gap: 10px; }
+  .sf-bar-label { font-family: var(--mono); font-size: 11.5px; width: 70px; color: var(--muted); flex-shrink: 0; }
+  .sf-bar-track { flex: 1; height: 14px; background: var(--panel-2); border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+  .sf-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width .6s; }
+  .sf-bar-val { font-family: var(--mono); font-size: 11.5px; width: 36px; text-align: right; flex-shrink: 0; }
+  .sf-bar-round { font-size: 10px; color: var(--muted); width: 50px; flex-shrink: 0; }
+
+  .sf-disclaimer { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; line-height: 1.6; }
+
+  @media (max-width: 600px) {
+    .sf-grid2 { grid-template-columns: 1fr; }
+    .sf-body { padding: 16px; }
+    .sf-recommend-value { font-size: 22px; }
+    .test-sens { font-size: 24px; }
+    .test-countdown { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sf-loader" role="status" aria-label="Loading">
+  <div class="spinner"></div>
+  <div class="brand">Sens Finder 3D</div>
+  <div class="status">Loading AI optimizer…</div>
+</div>
+
+<div id="sf-root" hidden>
+  <div class="sf-header">
+    <div class="sf-brand">SENS://FINDER <span>3D</span></div>
+    <div id="sf-header-status" style="font-family:var(--mono);font-size:12px;color:var(--muted);"></div>
+  </div>
+  <div class="sf-body" id="sf-body" role="main"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var root   = document.getElementById('sf-root');
+  var loader = document.getElementById('sf-loader');
+  var body   = document.getElementById('sf-body');
+
+  /* =========================================================================
+   *  CONFIG
+   * =======================================================================*/
+  var TOTAL_TRIALS     = 12;      // total aim trials (1 baseline + 4 explore + 7 guided)
+  var EXPLORE_TRIALS   = 4;       // index 1..4 = pure stochastic exploration
+  var TEST_DURATION    = 12000;   // ms per trial
+  var SIGMA_S          = 0.15;    // kernel bandwidth (sens axis)
+  var SIGMA_D          = 200;     // kernel bandwidth (dpi axis)
+  var UCB_KAPPA        = 18;      // exploration bonus weight (score points)
+  var RIDGE_TOL        = 1.5;     // score tolerance for ridge-aware tie-break
+  var SMOOTH_REF       = 150;     // rad/s^2 reference for smoothness normalisation
+  var RT_REF           = 800;     // ms reference for reaction-time normalisation
+  var DEV_REF          = 0.30;    // rad reference for path-deviation normalisation
+  var RT_MOVE_THRESH   = 0.8;     // rad/s — threshold for "first significant movement"
+  var TELEM_CAP        = 8192;    // telemetry ring capacity (frames)
+
+  var GAMES = {
+    valorant: { yaw: 0.07,  label: 'VALORANT', proEdpi: 280, icon: '▼',
+                sensMin: 0.10, sensMax: 1.50, dpiMin: 400, dpiMax: 1600 },
+    cs2:      { yaw: 0.022, label: 'CS2',      proEdpi: 880, icon: '⬤',
+                sensMin: 0.30, sensMax: 4.80, dpiMin: 400, dpiMax: 1600 }
+  };
+
+  /* =========================================================================
+   *  MATH UTIL
+   * =======================================================================*/
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function rand(a, b)      { return a + Math.random() * (b - a); }
+  function gauss(mu, sd) {
+    var u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return mu + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function cm360(sens, dpi, yaw) { return (360 * 2.54) / (sens * dpi * yaw); }
+
+  /* =========================================================================
+   *  AI CORE  — Gaussian Kernel Regression
+   *  These functions are intentionally self-contained (no outer-scope refs) so
+   *  they can be stringified into a Web Worker AND used as a synchronous
+   *  fallback on the main thread.
+   * =======================================================================*/
+  function kKernel(ds, dd, ss, sd) {
+    var a = ds / ss, b = dd / sd;
+    return Math.exp(-0.5 * (a * a + b * b));
+  }
+
+  /* Kernel-weighted local mean + local variance of the score surface. */
+  function kRegress(obs, sens, dpi, ss, sd) {
+    var n = obs.length, i, o, k, num = 0, den = 0;
+    if (n === 0) return { mean: 0, variance: 2500, weight: 0 };
+    for (i = 0; i < n; i++) {
+      o = obs[i];
+      k = kKernel(sens - o.sens, dpi - o.dpi, ss, sd);
+      num += k * o.score;
+      den += k;
+    }
+    if (den < 1e-9) return { mean: 0, variance: 2500, weight: 0 };
+    var mean = num / den;
+    var v = 0;
+    for (i = 0; i < n; i++) {
+      o = obs[i];
+      k = kKernel(sens - o.sens, dpi - o.dpi, ss, sd);
+      v += k * (o.score - mean) * (o.score - mean);
+    }
+    v /= den;
+    return { mean: mean, variance: v, weight: den };
+  }
+
+  /* Global maxima search on the continuous surface f(sens, dpi).
+   *  - coarse grid (121 x 61) -> fine refinement (21 x 21)
+   *  - ridge-aware tie-break: within `tol` score points of the max, prefer the
+   *    candidate whose DPI is closest to the user's physical DPI. This matters
+   *    because camera rotation depends only on sens*dpi (eDPI) — the surface is
+   *    a ridge along constant-eDPI lines, so we must pick a point on it.      */
+  function kOptimize(obs, ranges, ss, sd, anchorDpi, tol) {
+    var NI = 120, NJ = 60;
+    var sStep = (ranges.sensMax - ranges.sensMin) / NI;
+    var dStep = (ranges.dpiMax - ranges.dpiMin) / NJ;
+    var W = NJ + 1;
+    var grid = new Float64Array((NI + 1) * W);
+    var i, j, s, d, r, maxV = -1e18;
+
+    for (i = 0; i <= NI; i++) {
+      s = ranges.sensMin + i * sStep;
+      for (j = 0; j <= NJ; j++) {
+        d = ranges.dpiMin + j * dStep;
+        r = kRegress(obs, s, d, ss, sd);
+        grid[i * W + j] = r.mean;
+        if (r.mean > maxV) maxV = r.mean;
+      }
+    }
+
+    var bestI = 0, bestJ = 0, bestD = Infinity;
+    for (i = 0; i <= NI; i++) {
+      for (j = 0; j <= NJ; j++) {
+        if (grid[i * W + j] < maxV - tol) continue;
+        d = ranges.dpiMin + j * dStep;
+        var dd = Math.abs(d - anchorDpi);
+        if (dd < bestD) { bestD = dd; bestI = i; bestJ = j; }
+      }
+    }
+
+    var bs = ranges.sensMin + bestI * sStep;
+    var bd = ranges.dpiMin + bestJ * dStep;
+    var best = { sens: bs, dpi: bd, score: grid[bestI * W + bestJ] };
+
+    var fs = sStep / 10, fd = dStep / 10;
+    for (i = -10; i <= 10; i++) {
+      s = bs + i * fs;
+      if (s < ranges.sensMin || s > ranges.sensMax) continue;
+      for (j = -10; j <= 10; j++) {
+        d = bd + j * fd;
+        if (d < ranges.dpiMin || d > ranges.dpiMax) continue;
+        r = kRegress(obs, s, d, ss, sd);
+        if (r.mean > best.score + 1e-9) best = { sens: s, dpi: d, score: r.mean };
+      }
+    }
+
+    var ru = kRegress(obs, best.sens, best.dpi, ss, sd);
+    best.variance = ru.variance;
+    best.weight   = ru.weight;
+    return best;
+  }
+
+  /* Acquisition: exploit the regression mean + explore distant regions.
+   * Uses a normalised nearest-neighbour distance as the exploration term —
+   * this is a practical, cheap acquisition for a tiny observation budget.  */
+  function kAcquire(obs, ranges, ss, sd, kappa) {
+    var rS = ranges.sensMax - ranges.sensMin;
+    var rD = ranges.dpiMax - ranges.dpiMin;
+    if (!obs || obs.length === 0) {
+      return { sens: ranges.sensMin + Math.random() * rS,
+               dpi:  ranges.dpiMin + Math.random() * rD };
+    }
+    var best = null, bestU = -Infinity;
+    for (var i = 0; i < 800; i++) {
+      var s = ranges.sensMin + Math.random() * rS;
+      var d = ranges.dpiMin + Math.random() * rD;
+      var reg = kRegress(obs, s, d, ss, sd);
+      var dmin = Infinity;
+      for (var j = 0; j < obs.length; j++) {
+        var a = (s - obs[j].sens) / rS;
+        var b = (d - obs[j].dpi) / rD;
+        var q = a * a + b * b;
+        if (q < dmin) dmin = q;
+      }
+      dmin = Math.sqrt(dmin);
+      var u = reg.mean + kappa * dmin;
+      if (u > bestU) { bestU = u; best = { sens: s, dpi: d }; }
+    }
+    return best;
+  }
+
+  /* =========================================================================
+   *  STATE
+   * =======================================================================*/
+  var state = {
+    screen: 'setup',
+    game: 'valorant',
+    dpi: 800,
+    baseSens: 0.4,
+
+    ranges: null,
+    trials: [],        // all trials (valid + rejected)
+    observations: [],  // {sens, dpi, score} — valid only, fed to the AI
+    optimum: null,
+
+    scene: null, camera: null, renderer: null,
+    target: null, raycaster: null,
+
+    testActive: false,
+    testHits: 0,
+    testMisses: 0,
+    testWeightedHits: 0,
+    testRt: [],
+    testTtk: [],
+    testStartTime: 0,
+    targetSpawnTime: 0,
+    targetReacted: false,
+    testSens: 0,
+    testDpi: 800,
+
+    yaw: 0,
+    pitch: 0,
+
+    animId: null,
+    testTimer: null,
+    hudTimer: null,
+
+    worker: null,
+    pending: {},
+    reqId: 0
+  };
+
+  /* =========================================================================
+   *  TELEMETRY  — preallocated typed-array ring, zero per-frame allocation
+   * =======================================================================*/
+  var telemetry = {
+    n: 0,
+    maxGap: 0,
+    t:    new Float64Array(TELEM_CAP),
+    qx:   new Float32Array(TELEM_CAP),
+    qy:   new Float32Array(TELEM_CAP),
+    qz:   new Float32Array(TELEM_CAP),
+    qw:   new Float32Array(TELEM_CAP),
+    w:    new Float32Array(TELEM_CAP),   // angular speed   (rad/s)
+    a:    new Float32Array(TELEM_CAP),   // angular accel   (rad/s^2)
+    dev:  new Float32Array(TELEM_CAP),   // angular path deviation (rad)
+    dist: new Float32Array(TELEM_CAP)    // raycaster distance to target (0 = none)
+  };
+
+  function resetTelemetry() {
+    telemetry.n = 0;
+    telemetry.maxGap = 0;
+    _prevLogged = false;
+    _omegaEMA = 0; _alphaEMA = 0; _prevOmegaEMA = 0;
+  }
+
+  /* Reusable scratch objects — never allocated inside the render loop. */
+  var AXIS_X = new THREE.Vector3(1, 0, 0);
+  var AXIS_Y = new THREE.Vector3(0, 1, 0);
+  var _qYaw   = new THREE.Quaternion();
+  var _qPitch = new THREE.Quaternion();
+  var _prevQ  = new THREE.Quaternion();
+  var _prevQInv = new THREE.Quaternion();
+  var _dq     = new THREE.Quaternion();
+  var _fwd    = new THREE.Vector3();
+  var _toT    = new THREE.Vector3();
+  var _cross  = new THREE.Vector3();
+
+  var _prevLogged = false;
+  var _prevTime = 0;
+  var _omegaEMA = 0;
+  var _alphaEMA = 0;
+  var _prevOmegaEMA = 0;
+
+  /* =========================================================================
+   *  ROTATION MODEL
+   *  counts -> inches -> degrees -> radians, applied through quaternions.
+   *  rad = (movementX / DPI) * Sens * Yaw * 360 * (PI/180)
+   * =======================================================================*/
+  function countsToRadians(counts, dpi, sens, yaw) {
+    return (counts / dpi) * sens * yaw * 2 * Math.PI;
+    }
+
+  function applyLook(movementX, movementY) {
+    var game = GAMES[state.game];
+    var perCount = countsToRadians(1, state.testDpi, state.testSens, game.yaw);
+    state.yaw   -= movementX * perCount;
+    state.pitch -= movementY * perCount;
+    state.pitch = clamp(state.pitch, -Math.PI / 2.3, Math.PI / 2.3);
+    _qYaw.setFromAxisAngle(AXIS_Y, state.yaw);
+    _qPitch.setFromAxisAngle(AXIS_X, state.pitch);
+    state.camera.quaternion.copy(_qYaw).multiply(_qPitch);
+  }
+
+  /* =========================================================================
+   *  SETUP SCREEN
+   * =======================================================================*/
+  function render() {
+    if (state.screen === 'setup') renderSetup();
+    else if (state.screen === 'results') renderResults();
+  }
+
+  function renderSetup() {
+    body.innerHTML =
+      '<div class="sf-title">Continuous AI Sensitivity Optimizer 3D</div>' +
+      '<div class="sf-sub">Temukan sensitivitas &amp; DPI optimalmu dengan <b>Gaussian Kernel Regression + UCB acquisition</b> — optimizer kontinu yang memetakan permukaan skor f(sens, DPI) dari data aim test 3D milikmu sendiri. Bukan binary search, bukan tebakan: setiap trial menyempitkan estimasi permukaan, lalu global maxima dicari pada grid halus.</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label">Pilih Game</label>' +
+        '<div class="sf-radio-group" id="game-group">' +
+          Object.keys(GAMES).map(function(k){
+            var g = GAMES[k];
+            return '<div class="sf-radio ' + (state.game === k ? 'selected' : '') + '" data-key="' + k + '">' +
+              '<div class="sf-radio-title">' + g.icon + ' ' + g.label + '</div>' +
+              '<div class="sf-radio-desc">Yaw ' + g.yaw + ' · Pro avg ' + g.proEdpi + ' eDPI</div></div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-grid2">' +
+        '<div class="sf-field">' +
+          '<label class="sf-label" for="sf-dpi">Mouse DPI</label>' +
+          '<input class="sf-input" id="sf-dpi" type="number" value="' + state.dpi + '" min="100" max="26000" />' +
+        '</div>' +
+        '<div class="sf-field">' +
+          '<label class="sf-label" for="sf-sens">Sens yang biasa kamu pakai</label>' +
+          '<input class="sf-input" id="sf-sens" type="number" step="0.01" value="' + state.baseSens + '" />' +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-field">' +
+        '<label class="sf-label">Info Tes</label>' +
+        '<div class="sf-sub" style="font-size:11.5px;">' +
+          '• ' + TOTAL_TRIALS + ' trial aim test 3D × ' + (TEST_DURATION / 1000) + ' detik' +
+          '<br>• Sampling: 1 baseline (sens &amp; DPI kamu) + ' + EXPLORE_TRIALS + ' eksplorasi stokastik + ' + (TOTAL_TRIALS - EXPLORE_TRIALS - 1) + ' trial terpandu UCB' +
+          '<br>• Metrik: akurasi (depth-weighted), smoothness (angular jerk), path deviation 3D, reaction time' +
+          '<br>• Total estimasi: ~' + Math.max(1, Math.round(TOTAL_TRIALS * (TEST_DURATION / 1000 + 5) / 60)) + ' menit' +
+          '<br>• Gunakan <b>mouse</b>, bukan touchpad. Pastikan kursor terkunci (pointer lock).' +
+        '</div>' +
+      '</div>' +
+      '<div class="sf-error" id="sf-error" role="alert"></div>' +
+      '<div class="sf-btn-row">' +
+        '<button class="sf-btn" id="sf-start-btn">Mulai Optimasi Sens →</button>' +
+      '</div>';
+
+    Array.prototype.forEach.call(document.querySelectorAll('#game-group .sf-radio'), function(el){
+      el.addEventListener('click', function(){
+        state.game = el.dataset.key;
+        Array.prototype.forEach.call(document.querySelectorAll('#game-group .sf-radio'), function(r){
+          r.classList.remove('selected');
+        });
+        el.classList.add('selected');
+      });
+    });
+
+    document.getElementById('sf-start-btn').addEventListener('click', function(){
+      var dpiVal  = parseFloat(document.getElementById('sf-dpi').value);
+      var sensVal = parseFloat(document.getElementById('sf-sens').value);
+      var err = document.getElementById('sf-error');
+      if (!dpiVal || dpiVal <= 0 || dpiVal > 100000) { err.textContent = 'DPI tidak valid.'; return; }
+      if (!sensVal || sensVal <= 0 || sensVal > 100)  { err.textContent = 'Sens tidak valid.'; return; }
+      err.textContent = '';
+
+      state.dpi = dpiVal;
+      state.baseSens = sensVal;
+      state.trials = [];
+      state.observations = [];
+      state.optimum = null;
+
+      var g = GAMES[state.game];
+      state.ranges = {
+        sensMin: Math.min(g.sensMin, sensVal * 0.5),
+        sensMax: Math.max(g.sensMax, sensVal * 1.8),
+        dpiMin:  g.dpiMin,
+        dpiMax:  g.dpiMax
+      };
+
+      startOptimizer();
+    });
+  }
+
+  /* =========================================================================
+   *  TEST SCREEN (DOM identical to the original)
+   * =======================================================================*/
+  function setupTestUI() {
+    body.innerHTML =
+      '<div id="scene-wrap">' +
+        '<div id="crosshair"><div class="dot"></div></div>' +
+        '<div class="hud" id="hud">' +
+          '<div><b id="hud-round">1</b>/' + TOTAL_TRIALS + ' · <b id="hud-cand">T1</b></div>' +
+          '<div>Sens: <b class="accent" id="hud-sens">0.00</b></div>' +
+          '<div>Hits: <b id="hud-hits">0</b> · <span id="hud-time">' + (TEST_DURATION / 1000) + '</span>s</div>' +
+        '</div>' +
+        '<div id="test-overlay">' +
+          '<div class="test-round" id="to-round">TRIAL 1/' + TOTAL_TRIALS + '</div>' +
+          '<div class="test-sens" id="to-sens">0.00</div>' +
+          '<div class="test-countdown" id="to-countdown">3</div>' +
+          '<div class="test-hint" id="to-hint">Bersiaplah…</div>' +
+        '</div>' +
+      '</div>';
+    document.getElementById('to-round').innerHTML = '&nbsp;';
+    document.getElementById('to-hint').innerHTML = '';
+    document.getElementById('to-sens').innerHTML = 'Klik untuk mulai';
+    document.getElementById('to-countdown').style.display = 'none';
+  }
+
+  function startOptimizer() {
+    state.screen = 'test';
+    setupTestUI();
+    initScene();
+
+    var wrap = document.getElementById('scene-wrap');
+    wrap.insertBefore(state.renderer.domElement, wrap.firstChild);
+    resizeScene();
+    setupPersistentHandlers();
+
+    requestLock();
+
+    document.getElementById('test-overlay').addEventListener('click', function onFirstClick(){
+      document.getElementById('test-overlay').removeEventListener('click', onFirstClick);
+      requestLock();
+      document.getElementById('to-hint').innerHTML =
+        'Arahkan crosshair ke target dan klik. Akurat &amp; cepat — DPI ikut diuji di tiap trial.';
+      document.getElementById('to-countdown').style.display = 'block';
+      document.getElementById('to-countdown').textContent = '3';
+      document.getElementById('to-sens').innerHTML = state.baseSens.toFixed(4);
+      runOptimizer();
+    });
+  }
+
+  /* =========================================================================
+   *  OPTIMIZER LOOP
+   * =======================================================================*/
+  async function runOptimizer() {
+    for (var i = 0; i < TOTAL_TRIALS; i++) {
+      var pt = await pickPoint(i);
+
+      await showOverlay(i + 1, 'TRIAL ' + (i + 1), pt.sens,
+        'DPI ' + Math.round(pt.dpi) + ' · sens ' + pt.sens.toFixed(4) +
+        ' — arahkan crosshair ke target, klik secepat & seakurat mungkin.', 3);
+
+      var t = await runSingleTest(pt, i + 1);
+      registerTrial(t);
+
+      await showOverlay(i + 1, '✓ Trial ' + (i + 1) + ' selesai', 0,
+        'Skor ' + t.score.toFixed(1) +
+        ' · acc ' + (t.accuracy * 100).toFixed(0) + '%' +
+        ' · smooth ' + t.smoothness.toFixed(2) +
+        ' · dev ' + t.deviation.toFixed(3) +
+        ' · RT ' + t.rt.toFixed(0) + ' ms' +
+        (t.valid ? '' : ' — data dibuang (anomali)'), 2);
+    }
+    finishPSA();
+  }
+
+  /* ---------------------------------------------------------------------
+   *  Sampling strategy: baseline -> stochastic exploration -> UCB guided
+   * -------------------------------------------------------------------*/
+  async function pickPoint(i) {
+    var r = state.ranges;
+
+    if (i === 0) {
+      return { sens: clamp(state.baseSens, r.sensMin, r.sensMax),
+               dpi:  clamp(state.dpi,      r.dpiMin,  r.dpiMax) };
+    }
+
+    if (i <= EXPLORE_TRIALS) {
+      // Alternate: pure uniform sample / gaussian jitter around best-so-far.
+      if (i % 2 === 1 || state.observations.length === 0) {
+        return { sens: rand(r.sensMin, r.sensMax), dpi: rand(r.dpiMin, r.dpiMax) };
+      }
+      var best = state.observations.reduce(function(a, b){ return b.score > a.score ? b : a; });
+      var js = (r.sensMax - r.sensMin) * 0.16;
+      var jd = (r.dpiMax  - r.dpiMin)  * 0.16;
+      return { sens: clamp(gauss(best.sens, js), r.sensMin, r.sensMax),
+               dpi:  clamp(gauss(best.dpi,  jd), r.dpiMin,  r.dpiMax) };
+    }
+
+    return await requestSuggest();
+  }
+
+  function registerTrial(t) {
+    state.trials.push(t);
+    if (t.valid) {
+      state.observations.push({ sens: t.sens, dpi: t.dpi, score: t.score });
+    }
+  }
+
+  /* =========================================================================
+   *  OVERLAY (promise based, same DOM contract as original)
+   * =======================================================================*/
+  function showOverlay(round, label, sens, msg, countdown) {
+    return new Promise(function(resolve){
+      var overlay = document.getElementById('test-overlay');
+      if (!overlay) { resolve(); return; }
+      overlay.classList.remove('hidden');
+
+      document.getElementById('to-round').textContent =
+        'TRIAL ' + round + '/' + TOTAL_TRIALS + ' — ' + label;
+      document.getElementById('to-sens').textContent = sens > 0 ? sens.toFixed(4) : '—';
+      document.getElementById('to-hint').textContent = msg;
+
+      var cdEl = document.getElementById('to-countdown');
+      cdEl.style.display = 'block';
+      var cd = countdown;
+      cdEl.textContent = cd;
+
+      var hudRound = document.getElementById('hud-round');
+      var hudCand  = document.getElementById('hud-cand');
+      if (hudRound) hudRound.textContent = round;
+      if (hudCand)  hudCand.textContent  = label;
+
+      var iv = setInterval(function(){
+        cd--;
+        if (cd <= 0) {
+          clearInterval(iv);
+          cdEl.style.display = 'none';
+          overlay.classList.add('hidden');
+          resolve();
+        } else {
+          cdEl.textContent = cd;
+        }
+      }, 1000);
+    });
+  }
+
+  /* =========================================================================
+   *  PERSISTENT INPUT HANDLERS
+   * =======================================================================*/
+  function setupPersistentHandlers() {
+    document.addEventListener('mousemove', function(e){
+      if (!state.testActive || !state.camera) return;
+      if (document.pointerLockElement !== state.renderer.domElement) return;
+      applyLook(e.movementX, e.movementY);
+    });
+
+    document.addEventListener('mousedown', function(){
+      if (!state.testActive || !state.target || !state.camera) return;
+      if (document.pointerLockElement !== state.renderer.domElement) return;
+
+      state.raycaster.setFromCamera({ x: 0, y: 0 }, state.camera);
+      var hits = state.raycaster.intersectObject(state.target);
+      var ch = document.getElementById('crosshair');
+
+      if (hits.length > 0) {
+        state.testHits++;
+        state.testTtk.push(performance.now() - state.targetSpawnTime);
+
+        // Depth-aware weighting: farther targets contribute more to accuracy.
+        var dist = hits[0].distance;
+        var wgt = 1 + 0.6 * clamp((dist - 8) / 8, 0, 1);
+        state.testWeightedHits += wgt;
+
+        if (ch) ch.classList.remove('miss');
+        spawnTarget();
+      } else {
+        state.testMisses++;
+        if (ch) {
+          ch.classList.add('miss');
+          setTimeout(function(){ ch.classList.remove('miss'); }, 80);
+        }
+      }
+    });
+
+    window.addEventListener('resize', resizeScene);
+  }
+
+  /* =========================================================================
+   *  SINGLE TRIAL
+   * =======================================================================*/
+  function runSingleTest(pt, round) {
+    return new Promise(function(resolve){
+
+      resetTelemetry();
+
+      state.testActive = true;
+      state.testHits = 0;
+      state.testMisses = 0;
+      state.testWeightedHits = 0;
+      state.testRt = [];
+      state.testTtk = [];
+      state.testStartTime = performance.now();
+      state.targetSpawnTime = 0;
+      state.targetReacted = false;
+      state.testSens = pt.sens;
+      state.testDpi  = pt.dpi;
+      state.yaw = 0;
+      state.pitch = 0;
+      state.testTimer = null;
+      state.hudTimer = null;
+
+      if (state.camera) state.camera.quaternion.set(0, 0, 0, 1);
+
+      var hudHits  = document.getElementById('hud-hits');
+      var hudTime  = document.getElementById('hud-time');
+      var hudSens  = document.getElementById('hud-sens');
+      var hudRound = document.getElementById('hud-round');
+      var hudCand  = document.getElementById('hud-cand');
+      if (hudRound) hudRound.textContent = round;
+      if (hudCand)  hudCand.textContent  = 'T' + round;
+      if (hudSens)  hudSens.textContent  = pt.sens.toFixed(4) + ' @ ' + Math.round(pt.dpi) + 'dpi';
+
+      spawnTarget();
+
+      state.hudTimer = setInterval(function(){
+        if (!state.testActive) return;
+        var elapsed = performance.now() - state.testStartTime;
+        var remaining = Math.max(0, Math.ceil((TEST_DURATION - elapsed) / 1000));
+        if (hudHits) hudHits.textContent = state.testHits;
+        if (hudTime) hudTime.textContent = remaining;
+      }, 100);
+
+      state.testTimer = setTimeout(function(){
+        if (!state.testActive) return;
+        state.testActive = false;
+        if (state.hudTimer) { clearInterval(state.hudTimer); state.hudTimer = null; }
+        if (state.target) { state.scene.remove(state.target); state.target = null; }
+        resolve(computeTrialResult(pt, round));
+      }, TEST_DURATION);
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+   *  Biomechanics metrics
+   * -------------------------------------------------------------------*/
+  function computeTrialResult(pt, round) {
+    var n = telemetry.n, i;
+
+    /* --- Smoothness: 1 / (1 + stddev(alpha)/REF) over active aiming frames --- */
+    var sum = 0, sum2 = 0, cnt = 0;
+    for (i = 0; i < n; i++) {
+      if (telemetry.w[i] < 0.2) continue;         // ignore idle frames
+      var a = telemetry.a[i];
+      if (!isFinite(a)) continue;
+      sum += a; sum2 += a * a; cnt++;
+    }
+    var meanA = cnt ? sum / cnt : 0;
+    var varA  = cnt > 1 ? Math.max(0, sum2 / cnt - meanA * meanA) : 0;
+    var sdA   = Math.sqrt(varA);
+    var smoothness = 1 / (1 + sdA / SMOOTH_REF);
+
+    /* --- Path deviation 3D ---
+       d = |(P - P0) x (T - P0)| / |T - P0|  ->  normalised to sin(theta)     */
+    var dsum = 0, dcnt = 0, depthSum = 0;
+    for (i = 0; i < n; i++) {
+      if (telemetry.dist[i] <= 0) continue;
+      dsum += telemetry.dev[i];
+      depthSum += telemetry.dist[i];
+      dcnt++;
+    }
+    var devRad  = dcnt ? dsum / dcnt : DEV_REF;
+    var deviation = clamp(devRad / DEV_REF, 0, 1);
+    var meanDepth = dcnt ? depthSum / dcnt : 0;
+
+    /* --- Accuracy (depth weighted) --- */
+    var totalShots = state.testHits + state.testMisses;
+    var accuracy = (state.testWeightedHits + state.testMisses) > 0
+      ? state.testWeightedHits / (state.testWeightedHits + state.testMisses)
+      : 0;
+
+    /* --- Reaction time: target spawn -> first significant angular movement --- */
+    var meanRt = 1500;
+    if (state.testRt.length) {
+      var rs = 0;
+      for (i = 0; i < state.testRt.length; i++) rs += state.testRt[i];
+      meanRt = rs / state.testRt.length;
+    }
+    var rtNorm = clamp(meanRt / RT_REF, 0, 1);
+
+    /* --- Weighted score  (ROLE spec) ---
+       Score = 0.4*Acc + 0.3*Smooth - 0.2*Dev - 0.1*RT          */
+    var raw = 0.40 * accuracy + 0.30 * smoothness - 0.20 * deviation - 0.10 * rtNorm;
+    var score = clamp((raw + 0.30) * 100, 0, 100);
+
+    var t = {
+      index: round,
+      sens: pt.sens,
+      dpi: pt.dpi,
+      accuracy: accuracy,
+      smoothness: smoothness,
+      deviation: deviation,
+      rt: meanRt,
+      rtNorm: rtNorm,
+      score: score,
+      hits: state.testHits,
+      misses: state.testMisses,
+      frames: n,
+      maxGap: telemetry.maxGap,
+      meanDepth: meanDepth,
+      valid: false
+    };
+    t.valid = isValidTrial(t);
+    return t;
+  }
+
+  /* ---------------------------------------------------------------------
+   *  Anomaly filter
+   * -------------------------------------------------------------------*/
+  function isValidTrial(t) {
+    if (t.frames < 60) return false;            // frames missing / tab throttled
+    if (t.maxGap > 0.40) return false;          // frame drop
+    if (t.hits + t.misses < 4) return false;    // not enough engagements
+    if (t.hits < 1) return false;               // no hit at all
+    if (t.accuracy < 0.10) return false;        // random clicking
+    if (t.rt > 1500) return false;              // AFK / no reaction
+    if (t.smoothness < 0.02) return false;      // pure noise
+    return true;
+  }
+
+  /* =========================================================================
+   *  WEB WORKER (AI computation off the main thread) + sync fallback
+   * =======================================================================*/
+  function createWorker() {
+    try {
+      var src =
+        'var kKernel='   + kKernel.toString()   + ';\n' +
+        'var kRegress='  + kRegress.toString()  + ';\n' +
+        'var kOptimize=' + kOptimize.toString() + ';\n' +
+        'var kAcquire='  + kAcquire.toString()  + ';\n' +
+        'self.onmessage=function(e){' +
+          'var m=e.data,res;' +
+          'if(m.cmd==="optimize"){res=kOptimize(m.obs,m.ranges,m.ss,m.sd,m.anchorDpi,m.tol);}' +
+          'else if(m.cmd==="suggest"){res=kAcquire(m.obs,m.ranges,m.ss,m.sd,m.kappa);}' +
+          'self.postMessage({id:m.id,result:res});' +
+        '};';
+      var url = URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
+      var w = new Worker(url);
+      w.onmessage = function(e){
+        var p = state.pending[e.data.id];
+        if (p) { delete state.pending[e.data.id]; p.resolve(e.data.result); }
+      };
+      w.onerror = function(){
+        // Worker unavailable -> degrade gracefully to main-thread computation.
+        state.worker = null;
+        for (var id in state.pending) {
+          var p = state.pending[id];
+          delete state.pending[id];
+          try { p.resolve(p.local()); } catch (err) { p.resolve(null); }
+        }
+      };
+      return w;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function requestSuggest() {
+    return new Promise(function(resolve){
+      var r = state.ranges;
+      var local = function(){ return kAcquire(state.observations, r, SIGMA_S, SIGMA_D, UCB_KAPPA); };
+      if (state.worker) {
+        var id = ++state.reqId;
+        state.pending[id] = { resolve: resolve, local: local };
+        state.worker.postMessage({
+          cmd: 'suggest', id: id, obs: state.observations, ranges: r,
+          ss: SIGMA_S, sd: SIGMA_D, kappa: UCB_KAPPA
+        });
+      } else {
+        resolve(local());
+      }
+    });
+  }
+
+  function requestOptimize() {
+    return new Promise(function(resolve){
+      var r = state.ranges;
+      var local = function(){
+        return kOptimize(state.observations, r, SIGMA_S, SIGMA_D, state.dpi, RIDGE_TOL);
+      };
+      if (state.worker) {
+        var id = ++state.reqId;
+        state.pending[id] = { resolve: resolve, local: local };
+        state.worker.postMessage({
+          cmd: 'optimize', id: id, obs: state.observations, ranges: r,
+          ss: SIGMA_S, sd: SIGMA_D, anchorDpi: state.dpi, tol: RIDGE_TOL
+        });
+      } else {
+        resolve(local());
+      }
+    });
+  }
+
+  /* =========================================================================
+   *  3D SCENE
+   * =======================================================================*/
+  var targetGeom = new THREE.SphereGeometry(0.55, 16, 16);
+  var targetMat  = new THREE.MeshStandardMaterial({
+    color: 0xe8a33d, emissive: 0xe8a33d, emissiveIntensity: 0.4,
+    metalness: 0.3, roughness: 0.4
+  });
+
+  function spawnTarget() {
+    if (!state.scene) return;
+    if (state.target) state.scene.remove(state.target);
+    state.target = new THREE.Mesh(targetGeom, targetMat);
+    state.target.position.set(
+      (Math.random() - 0.5) * 14,
+      0.5 + Math.random() * 5,
+      -8 - Math.random() * 7
+    );
+    state.scene.add(state.target);
+    state.targetSpawnTime = performance.now();
+    state.targetReacted = false;
+  }
+
+  function initScene() {
+    if (state.renderer) {
+      state.renderer.domElement.remove();
+      state.renderer.dispose();
+    }
+
+    var wrap = document.getElementById('scene-wrap');
+    if (!wrap) return;
+    var w = wrap.clientWidth || 800;
+    var h = wrap.clientHeight || 500;
+
+    state.scene = new THREE.Scene();
+    state.scene.background = new THREE.Color(0x05070a);
+    state.scene.fog = new THREE.Fog(0x05070a, 25, 45);
+
+    state.camera = new THREE.PerspectiveCamera(80, w / h, 0.1, 100);
+    state.camera.position.set(0, 1.7, 0);
+    state.camera.quaternion.set(0, 0, 0, 1);
+
+    state.renderer = new THREE.WebGLRenderer({ antialias: true });
+    state.renderer.setSize(w, h);
+    state.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    state.scene.add(new THREE.AmbientLight(0x404060, 0.6));
+
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 10, 7);
+    state.scene.add(dirLight);
+
+    var fillLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+    fillLight.position.set(-5, 5, -5);
+    state.scene.add(fillLight);
+
+    var grid = new THREE.GridHelper(40, 20, 0x1a2332, 0x1a2332);
+    grid.position.y = -0.5;
+    state.scene.add(grid);
+
+    state.raycaster = new THREE.Raycaster();
+    animate();
+  }
+
+  function resizeScene() {
+    if (!state.renderer) return;
+    var wrap = document.getElementById('scene-wrap');
+    if (!wrap) return;
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    if (w > 0 && h > 0) {
+      state.renderer.setSize(w, h);
+      if (state.camera) {
+        state.camera.aspect = w / h;
+        state.camera.updateProjectionMatrix();
+      }
+    }
+  }
+
+  /* =========================================================================
+   *  RENDER LOOP + PER-FRAME TELEMETRY
+   * =======================================================================*/
+  function logFrame(now) {
+    var n = telemetry.n;
+    if (n >= TELEM_CAP) return;
+
+    var q = state.camera.quaternion;
+    var omega = 0, alpha = 0;
+
+    if (_prevLogged) {
+      var dt = (now - _prevTime) / 1000;
+      if (dt > telemetry.maxGap) telemetry.maxGap = dt;
+      if (dt > 0.0005) {
+        _prevQInv.copy(_prevQ).invert();
+        _dq.copy(q).multiply(_prevQInv);
+        var angle = 2 * Math.acos(clamp(Math.abs(_dq.w), 0, 1));
+        var omegaRaw = angle / dt;
+
+        _omegaEMA += 0.4 * (omegaRaw - _omegaEMA);
+        var alphaRaw = (_omegaEMA - _prevOmegaEMA) / dt;
+        _alphaEMA += 0.4 * (alphaRaw - _alphaEMA);
+        _prevOmegaEMA = _omegaEMA;
+
+        omega = _omegaEMA;
+        alpha = _alphaEMA;
+      }
+    }
+
+    /* Reaction time: spawn -> first significant angular movement */
+    if (state.target && !state.targetReacted && omega > RT_MOVE_THRESH) {
+      state.targetReacted = true;
+      state.testRt.push(now - state.targetSpawnTime);
+    }
+
+    /* Depth-aware raycast distance + path deviation via cross product */
+    var dist = 0, dev = 0;
+    if (state.target) {
+      _fwd.set(0, 0, -1).applyQuaternion(q);
+      _toT.copy(state.target.position).sub(state.camera.position);
+      dist = _toT.length();
+      if (dist > 1e-4) {
+        _cross.crossVectors(_fwd, _toT);
+        dev = _cross.length() / dist;   // sin(theta) ≈ angular deviation (rad)
+      }
+    }
+
+    telemetry.t[n]    = now;
+    telemetry.qx[n]   = q.x;
+    telemetry.qy[n]   = q.y;
+    telemetry.qz[n]   = q.z;
+    telemetry.qw[n]   = q.w;
+    telemetry.w[n]    = omega;
+    telemetry.a[n]    = alpha;
+    telemetry.dev[n]  = dev;
+    telemetry.dist[n] = dist;
+    telemetry.n = n + 1;
+
+    _prevQ.copy(q);
+    _prevTime = now;
+    _prevLogged = true;
+  }
+
+  function animate() {
+    if (!state.renderer || !state.scene || !state.camera) return;
+    state.animId = requestAnimationFrame(animate);
+    if (state.testActive) logFrame(performance.now());
+    state.renderer.render(state.scene, state.camera);
+  }
+
+  /* =========================================================================
+   *  FINISH + RESULTS
+   * =======================================================================*/
+  function cleanupTest() {
+    state.testActive = false;
+    if (state.hudTimer)  { clearInterval(state.hudTimer);  state.hudTimer = null; }
+    if (state.testTimer) { clearTimeout(state.testTimer);  state.testTimer = null; }
+    if (state.target && state.scene) { state.scene.remove(state.target); state.target = null; }
+  }
+
+  async function finishPSA() {
+    cleanupTest();
+
+    if (state.renderer) {
+      cancelAnimationFrame(state.animId);
+      state.renderer.domElement.remove();
+      state.renderer.dispose();
+      state.renderer = null;
+    }
+    state.screen = 'results';
+
+    var best = null, i;
+    for (i = 0; i < state.trials.length; i++) {
+      var t = state.trials[i];
+      if (t.valid && (!best || t.score > best.score)) best = t;
+    }
+
+    if (state.observations.length >= 3) {
+      var opt = await requestOptimize();
+      opt.sufficient = true;
+      state.optimum = opt;
+    } else {
+      state.optimum = {
+        sens: best ? best.sens : state.baseSens,
+        dpi:  best ? best.dpi  : state.dpi,
+        score: best ? best.score : 0,
+        variance: 0,
+        sufficient: false
+      };
+    }
+
+    renderResults();
+  }
+
+  function renderResults() {
+    var game = GAMES[state.game];
+    var opt  = state.optimum;
+    var trials = state.trials;
+    var r = state.ranges;
+
+    var optimalSens = opt.sens;
+    var optimalDpi  = opt.dpi;
+    var cms  = cm360(optimalSens, optimalDpi, game.yaw);
+    var eDpi = optimalSens * optimalDpi;
+
+    /* Confidence from residual variance at the optimum */
+    var sigma = Math.sqrt(Math.max(0, opt.variance || 0));
+    var conf, confClass;
+    if (!opt.sufficient) { conf = 'data belum cukup'; }
+    else if (sigma < 6)  { conf = 'tinggi'; }
+    else if (sigma < 12) { conf = 'sedang'; }
+    else                 { conf = 'rendah'; }
+
+    /* ---------- Convergence bars: best-so-far + search position ---------- */
+    var maxScore = 0, i;
+    for (i = 0; i < trials.length; i++) if (trials[i].score > maxScore) maxScore = trials[i].score;
+    if (maxScore <= 0) maxScore = 1;
+
+    var runningBest = 0;
+    var convBars = trials.map(function(t, idx){
+      if (t.score > runningBest) runningBest = t.score;
+      var sensPct = (r.sensMax - r.sensMin) > 0
+        ? clamp((t.sens - r.sensMin) / (r.sensMax - r.sensMin), 0, 1) * 100
+        : 50;
+      var fillPct = clamp(runningBest, 0, 100);
+      var dim = t.valid ? '' : ';opacity:0.22';
+      return '<div class="sf-bar-row">' +
+        '<div class="sf-bar-round">T' + (idx + 1) + '</div>' +
+        '<div class="sf-bar-track" style="position:relative;">' +
+          '<div class="sf-bar-fill" style="position:absolute;left:0%;width:' + fillPct + '%;height:100%' + dim + ';border-radius:3px;"></div>' +
+          '<div class="sf-bar-fill" style="position:absolute;left:' + sensPct + '%;width:4px;height:100%;background:var(--accent-2);transform:translateX(-2px);border-radius:2px;"></div>' +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--muted);width:96px;flex-shrink:0;text-align:right;">' +
+          t.sens.toFixed(4) + ' @ ' + Math.round(t.dpi) + '</div>' +
+        '<div style="font-size:10px;color:var(--accent);width:34px;flex-shrink:0;text-align:right;">' +
+          t.score.toFixed(0) + '</div>' +
+      '</div>';
+    }).join('');
+
+    /* ---------- Score bars: every trial ---------- */
+    var bestScore = 0;
+    trials.forEach(function(t){ if (t.valid && t.score > bestScore) bestScore = t.score; });
+
+    var scoreBars = trials.map(function(t, idx){
+      var pct = maxScore > 0 ? (t.score / maxScore) * 100 : 0;
+      var isBest = (t.valid && t.score === bestScore);
+      return '<div class="sf-bar-row">' +
+        '<div class="sf-bar-label" style="width:96px;">T' + (idx + 1) + ' ' +
+          t.sens.toFixed(3) + '/' + Math.round(t.dpi) + '</div>' +
+        '<div class="sf-bar-track"><div class="sf-bar-fill" style="width:' + pct + '%' +
+          (isBest ? '' : ';opacity:0.6') + (t.valid ? '' : ';background:#3a4048') + '"></div></div>' +
+        '<div class="sf-bar-val">' + t.score.toFixed(0) + '</div></div>';
+    }).join('');
+
+    /* ---------- Raw table ---------- */
+    var tableRows = trials.map(function(t){
+      var mark = t.valid ? '' : ' ✗';
+      return '<tr' + (t.valid && t.score === bestScore ? ' class="best"' : '') + '>' +
+        '<td>' + t.index + mark + '</td>' +
+        '<td>' + t.sens.toFixed(4) + '</td>' +
+        '<td>' + Math.round(t.dpi) + '</td>' +
+        '<td>' + (t.accuracy * 100).toFixed(0) + '%</td>' +
+        '<td>' + t.smoothness.toFixed(3) + '</td>' +
+        '<td>' + t.deviation.toFixed(3) + '</td>' +
+        '<td>' + t.rt.toFixed(0) + '</td>' +
+        '<td>' + t.score.toFixed(1) + '</td></tr>';
+    }).join('');
+
+    var validCount = state.observations.length;
+
+    /* ---------- Compose (DOM classes unchanged) ---------- */
+    body.innerHTML =
+      '<div class="sf-title">Hasil Optimasi — Selesai!</div>' +
+      '<div class="sf-sub">Continuous optimizer (Gaussian Kernel Regression + UCB acquisition) selesai dalam ' +
+        TOTAL_TRIALS + ' trial. ' + validCount + ' trial lolos filter anomali dan dipakai untuk memetakan ' +
+        'permukaan skor f(sens, DPI). Global maxima dicari pada grid 121×61 lalu dihaluskan dengan refinement lokal.</div>' +
+
+      '<div class="sf-recommend">' +
+        '<div class="sf-label">' + game.label + ' — Rekomendasi Sens</div>' +
+        '<div class="sf-recommend-value">' + optimalSens.toFixed(4) + '</div>' +
+        '<div class="sf-recommend-sub">DPI ' + Math.round(optimalDpi) + ' · ≈ ' + cms.toFixed(1) +
+          ' cm/360° · ' + eDpi.toFixed(0) + ' eDPI · confidence: ' + conf + '</div>' +
+      '</div>' +
+
+      '<div class="sf-field">' +
+        '<label class="sf-label">Konvergensi Optimizer</label>' +
+        '<div class="sf-sub" style="font-size:11px;margin-bottom:4px;">' +
+          'Bar = skor terbaik kumulatif (best-so-far). <span style="color:var(--accent-2);">│</span> = posisi sens yang diuji ' +
+          'dalam rentang ' + r.sensMin.toFixed(2) + ' – ' + r.sensMax.toFixed(2) + '. Trial dengan data tidak valid ditampilkan redup.' +
+        '</div>' +
+        '<div class="sf-bars">' + convBars + '</div>' +
+      '</div>' +
+
+      '<div class="sf-field">' +
+        '<label class="sf-label">Skor Semua Trial</label>' +
+        '<div class="sf-sub" style="font-size:11px;margin-bottom:4px;">' +
+          'Score = 0.40·Accuracy + 0.30·Smoothness − 0.20·PathDeviation − 0.10·ReactionTime. ' +
+          'Tertinggi: ' + bestScore.toFixed(1) + ' poin.</div>' +
+        '<div class="sf-bars">' + scoreBars + '</div>' +
+      '</div>' +
+
+      '<div class="sf-field">' +
+        '<label class="sf-label">Data Mentah Per Trial</label>' +
+        '<table class="sf-table">' +
+          '<thead><tr><th>#</th><th>Sens</th><th>DPI</th><th>Acc</th><th>Smooth</th><th>Dev</th><th>RT</th><th>Skor</th></tr></thead>' +
+          '<tbody>' + tableRows + '</tbody>' +
+        '</table>' +
+      '</div>' +
+
+      '<div class="sf-warn">' +
+        (opt.sufficient
+          ? 'Catatan teknis: dalam model rotasi FPS, kecepatan putar kamera hanya bergantung pada hasil kali sens × DPI (eDPI). ' +
+            'Permukaan skor karena itu membentuk ridge sepanjang garis eDPI konstan. Optimizer mencari eDPI optimal, lalu memilih ' +
+            'titik pada ridge tersebut yang DPI-nya paling dekat dengan DPI kamu (tie-break &lt; ' + RIDGE_TOL + ' poin) agar ' +
+            'granularitas input tetap nyaman. <b>Ubah nilai sens di game sesuai rekomendasi; DPI tidak wajib diubah.</b>'
+          : '⚠️ <b>Data belum cukup untuk rekomendasi solid.</b> Hanya ' + validCount + ' trial yang lolos filter anomali ' +
+            '(dari ' + TOTAL_TRIALS + '). Angka di atas hanyalah trial terbaik yang teramati, bukan hasil optimasi. ' +
+            'Ulangi tes dan pastikan kamu menjawab target dengan serius.') +
+      '</div>' +
+
+      '<div class="sf-btn-row">' +
+        '<button class="sf-btn" id="sf-copy-btn">Salin ' + optimalSens.toFixed(4) + ' @ ' + Math.round(optimalDpi) + ' DPI</button>' +
+        '<button class="sf-btn secondary" id="sf-restart-btn">Ulangi dari awal</button>' +
+      '</div>' +
+
+      '<div class="sf-disclaimer">' +
+        'Tool ini memberi estimasi awal berdasarkan hasil aim-test di browser, yang berbeda dari kondisi in-game sebenarnya ' +
+        '(input lag, engine, FOV, resolusi crosshair, dll). Gunakan hasil ini sebagai titik awal, lalu sesuaikan lagi secara ' +
+        'manual selama beberapa sesi bermain nyata.' +
+      '</div>';
+
+    document.getElementById('sf-copy-btn').addEventListener('click', function(){
+      var txt = optimalSens.toFixed(4) + ' @ ' + Math.round(optimalDpi) + ' DPI';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).catch(function(){});
+      }
+    });
+
+    document.getElementById('sf-restart-btn').addEventListener('click', function(){
+      cleanupTest();
+      if (state.renderer) {
+        cancelAnimationFrame(state.animId);
+        state.renderer.domElement.remove();
+        state.renderer.dispose();
+        state.renderer = null;
+      }
+      state.screen = 'setup';
+      state.trials = [];
+      state.observations = [];
+      state.optimum = null;
+      render();
+    });
+  }
+
+  /* =========================================================================
+   *  POINTER LOCK
+   * =======================================================================*/
+  function requestLock() {
+    try {
+      if (state.renderer && document.pointerLockElement !== state.renderer.domElement) {
+        var p = state.renderer.domElement.requestPointerLock();
+        if (p && typeof p.catch === 'function') p.catch(function(){});
+      }
+    } catch (e) {}
+  }
+
+  /* =========================================================================
+   *  BOOT
+   * =======================================================================*/
+  function init() {
+    state.worker = createWorker();
+    root.hidden = false;
+    loader.classList.add('hidden');
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
