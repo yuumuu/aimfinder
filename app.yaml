@@ -1,8 +1,8 @@
-kind: wasmer.io/App.v0
 name: aimfinder
+app_id: da_nQgIotrU4rkD
 owner: yuumuu
 package: .
-app_id: da_nQgIotrU4rkD
+kind: wasmer.io/App.v0
 annotations:
   anybuild.run/config:
     name: out
