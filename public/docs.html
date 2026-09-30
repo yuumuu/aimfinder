@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AimFinder Docs — Panduan Lengkap 10 Varian</title>
+<meta name="description" content="Dokumentasi lengkap AimFinder: cara pakai 10 varian Sens Finder, metodologi PSA & Continuous AI, panduan DPI, requirement browser, struktur proyek, dan deploy Wasmer Edge.">
+<meta name="theme-color" content="#0a0d11">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0d11'/><circle cx='16' cy='16' r='8' fill='none' stroke='%23e8a33d' stroke-width='2'/><circle cx='16' cy='16' r='2' fill='%23e8a33d'/></svg>">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0d11;--bg2:#0d1116;--panel:#12161c;--panel2:#171c24;--line:#232a34;--line2:#2c3441;--text:#e6e9ee;--text2:#b8c0cc;--muted:#7c8797;--accent:#e8a33d;--teal:#45d6c4;--mono:ui-monospace,'JetBrains Mono',Consolas,Menlo,monospace;--sans:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',system-ui,sans-serif;--r:14px}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.7}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header.top{position:sticky;top:0;z-index:20;background:rgba(10,13,17,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-inner{display:flex;align-items:center;justify-content:space-between;height:60px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.mark{width:30px;height:30px;border-radius:8px;background:rgba(232,163,61,.12);border:1px solid rgba(232,163,61,.35);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:700}
+.brand b{font-family:var(--mono);letter-spacing:2px;font-size:13px;color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);text-decoration:none;font-size:13px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#14100a;font-weight:700}
+nav.links{display:flex;gap:8px}
+.hero{padding:36px 0 10px}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:8px}
+h1{font-size:clamp(26px,3.6vw,38px);letter-spacing:-.02em;margin-bottom:8px}
+.lead{color:var(--text2);max-width:800px;font-size:15px}
+.layout{display:grid;grid-template-columns:240px 1fr;gap:22px;padding:22px 0 40px}
+aside.toc{position:sticky;top:76px;align-self:start;border:1px solid var(--line);background:var(--panel);border-radius:var(--r);padding:16px;font-size:13px}
+aside.toc b{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase}
+aside.toc a{display:block;color:var(--text2);text-decoration:none;padding:5px 0}
+aside.toc a:hover{color:var(--text)}
+article.doc{display:flex;flex-direction:column;gap:18px;min-width:0}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+section.card h2{font-size:20px;margin-bottom:8px;letter-spacing:-.01em}
+section.card h2 span{font-family:var(--mono);font-size:12px;color:var(--accent);margin-right:8px}
+section.card h3{font-size:15px;margin:14px 0 6px;color:var(--text)}
+section.card p,section.card li{font-size:14px;color:var(--text2)}
+section.card ul,section.card ol{padding-left:20px;display:flex;flex-direction:column;gap:6px;margin:8px 0}
+code.inline{font-family:var(--mono);font-size:12.5px;background:rgba(232,163,61,.1);color:var(--accent);padding:2px 6px;border-radius:6px}
+pre{background:#07090c;border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font-family:var(--mono);font-size:12.5px;color:var(--text2);margin:10px 0}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:9px 10px;text-align:left;white-space:nowrap}
+th{background:var(--panel2);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text)}
+td{color:var(--text2)}
+td a,section.card a{color:var(--accent)}
+.badge{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--line2);border-radius:999px;padding:3px 9px;color:var(--text2)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:10px}
+.note{border-left:3px solid var(--accent);background:rgba(232,163,61,.07);padding:12px 14px;border-radius:0 10px 10px 0;font-size:13.5px;color:var(--text2)}
+footer{border-top:1px solid var(--line);padding:20px 0;color:var(--muted);font-size:12.5px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}aside.toc{position:static}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap top-inner">
+<a class="brand" href="./index.html"><span class="mark">◎</span><b>AIMFINDER / DOCS</b></a>
+<nav class="links"><a class="btn" href="./index.html">← Landing</a><a class="btn primary" href="https://aimfinder.wasmer.app" target="_blank" rel="noopener">Live ↗</a></nav>
+</div></header>
+
+<main class="wrap">
+<div class="hero">
+<div class="kicker">Dokumentasi • 10 varian • Wasmer Edge</div>
+<h1>Panduan lengkap AimFinder.</h1>
+<p class="lead">Satu landing (<code class="inline">index.html</code>) + 10 file varian yang tidak diubah + halaman docs ini (<code class="inline">docs.html</code>). Semua berjalan statis di Wasmer Edge dari folder <code class="inline">public/</code>.</p>
+</div>
+
+<div class="layout">
+<aside class="toc">
+<b>Daftar isi</b>
+<a href="#ringkasan">1. Ringkasan</a>
+<a href="#mulai">2. Mulai cepat</a>
+<a href="#versi">3. Matriks 10 versi</a>
+<a href="#detail">4. Detail per file</a>
+<a href="#metode">5. Metodologi</a>
+<a href="#dpi">6. Panduan DPI &amp; sens</a>
+<a href="#browser">7. Browser &amp; teknis</a>
+<a href="#struktur">8. Struktur proyek</a>
+<a href="#deploy">9. Deploy Wasmer</a>
+<a href="#faq">10. FAQ</a>
+<a href="#changelog">11. Changelog</a>
+</aside>
+
+<article class="doc">
+<section class="card" id="ringkasan"><h2><span>01</span>Ringkasan</h2>
+<p><b>AimFinder</b> adalah koleksi tool browser untuk mencari sensitivitas mouse optimal di VALORANT, CS2, dan FPS lain lewat uji aim 3D (Three.js + Pointer Lock). Tidak ada build step, tidak ada backend — murni HTML statis.</p>
+<div class="grid2">
+<div><span class="badge">PSA</span><p><code class="inline">chat.html</code>, <code class="inline">play.html</code> — binary search klasik, baseline cepat.</p></div>
+<div><span class="badge">Continuous AI</span><p><code class="inline">deep/seek/aim/finder/valo</code> — optimasi berjalan terus selama trial.</p></div>
+<div><span class="badge">Lab</span><p><code class="inline">rant.html</code>, <code class="inline">sens.html</code> — Calibration Lab amber, sens.html sudah contrast-fix (rekomendasi).</p></div>
+<div><span class="badge">Prototype</span><p><code class="inline">gpt.html</code> — 255 baris untuk belajar logika AI training.</p></div>
+</div>
+</section>
+
+<section class="card" id="mulai"><h2><span>02</span>Mulai cepat</h2>
+<ol>
+<li>Buka <a href="./index.html">landing</a> → pilih <code class="inline">sens.html</code> dulu jika bingung.</li>
+<li>Klik canvas → izinkan <b>Pointer Lock</b> (mouse terkunci untuk input mentah).</li>
+<li>Selesaikan sesi: <b>Flick</b> (8 target acak), <b>Tracking</b> (8 detik), <b>Switching</b> (2 target bergantian).</li>
+<li>Catat rekomendasi sens + DPI. Uji ulang di Deathmatch / Range in-game.</li>
+</ol>
+<div class="note">Hasil browser adalah estimasi awal. Input lag, engine game, dan resolusi crosshair berbeda dengan kondisi in-game. Jadikan titik awal, lalu fine-tune manual.</div>
+</section>
+
+<section class="card" id="versi"><h2><span>03</span>Matriks 10 versi (urutan logs.txt)</h2>
+<table>
+<tr><th>#</th><th>File</th><th>Keluarga</th><th>Judul</th><th>Ukuran</th><th>Buka</th></tr>
+<tr><td>1</td><td>chat.html</td><td>PSA</td><td>Sens Finder 3D — PSA Sensitivity Tool</td><td>31 KB / 743</td><td><a href="./chat.html">→</a></td></tr>
+<tr><td>2</td><td>play.html</td><td>PSA</td><td>Sens Finder 3D — PSA Sensitivity Tool</td><td>31 KB / 742</td><td><a href="./play.html">→</a></td></tr>
+<tr><td>3</td><td>gpt.html</td><td>Prototype</td><td>AI Aim Optimizer V3</td><td>6 KB / 255</td><td><a href="./gpt.html">→</a></td></tr>
+<tr><td>4</td><td>deep.html</td><td>Continuous AI</td><td>Continuous AI Sensitivity Optimizer</td><td>54 KB / 1317</td><td><a href="./deep.html">→</a></td></tr>
+<tr><td>5</td><td>seek.html</td><td>Continuous AI</td><td>Continuous AI (fullscreen)</td><td>94 KB / 2300</td><td><a href="./seek.html">→</a></td></tr>
+<tr><td>6</td><td>aim.html</td><td>Continuous AI</td><td>Continuous AI (variant)</td><td>96 KB / 2013</td><td><a href="./aim.html">→</a></td></tr>
+<tr><td>7</td><td>finder.html</td><td>Continuous AI</td><td>Continuous AI (full layout)</td><td>138 KB / 2686</td><td><a href="./finder.html">→</a></td></tr>
+<tr><td>8</td><td>valo.html</td><td>VALORANT</td><td>AI Sensitivity Optimizer (Valorant theme)</td><td>140 KB / 2822</td><td><a href="./valo.html">→</a></td></tr>
+<tr><td>9</td><td>rant.html</td><td>Lab</td><td>Sensitivity Calibration Lab</td><td>137 KB / 1858</td><td><a href="./rant.html">→</a></td></tr>
+<tr><td>10</td><td>sens.html</td><td>Lab latest</td><td>Calibration Lab (contrast fix)</td><td>145 KB / 1860</td><td><a href="./sens.html">→</a></td></tr>
+</table>
+<p>Rekomendasi default: <code class="inline">sens.html</code> → <code class="inline">finder.html</code> → <code class="inline">valo.html</code> (vibes) → <code class="inline">chat.html</code> (baseline PSA).</p>
+</section>
+
+<section class="card" id="detail"><h2><span>04</span>Detail per file</h2>
+<h3 id="chat"><code class="inline">chat.html</code> — PSA (01)</h3><p>PSA binary-search, meta VALORANT &amp; CS2, loader + panel 560px. Baseline cepat.</p>
+<h3 id="play"><code class="inline">play.html</code> — PSA embed (02)</h3><p>Struktur sama dengan chat, cocok di-iframe karena min-height tetap.</p>
+<h3 id="gpt"><code class="inline">gpt.html</code> — Prototype V3 (03)</h3><p>State <code class="inline">sens/dpi/trajectory/rounds/angVel/angAcc</code>, sphere target acak, pointer lock mentah. Untuk ngoprek.</p>
+<h3 id="deep"><code class="inline">deep.html</code> — Continuous AI awal (04)</h3><p>Transisi PSA → AI kontinu, 1317 baris.</p>
+<h3 id="seek"><code class="inline">seek.html</code> — Fullscreen AI (05)</h3><p>100dvh, 2300 baris, variabel desain lengkap untuk sesi panjang.</p>
+<h3 id="aim"><code class="inline">aim.html</code> — AI variant (06)</h3><p>2013 baris, titik tengah evolusi seek → finder.</p>
+<h3 id="finder"><code class="inline">finder.html</code> — Flagship AI (07)</h3><p>2686 baris, container 1180px, kartu + header-actions. Paling lengkap di keluarga AI.</p>
+<h3 id="valo"><code class="inline">valo.html</code> — Valorant theme (08)</h3><p>Palet <code class="inline">#0f1923 / #ff4655 / #00ffba</code>, 2822 baris terbesar. Pilih jika mau nuansa in-game.</p>
+<h3 id="rant"><code class="inline">rant.html</code> — Calibration Lab (09)</h3><p>Lab amber <code class="inline">#ffb000</code> di atas <code class="inline">#0c0c0c</code>, grid + tabbar.</p>
+<h3 id="sens"><code class="inline">sens.html</code> — Lab contrast-fix (10)</h3><p>Sama dengan rant + perbaikan kontras (11:1 / 7.5:1 / 5:1). <b>Default yang disarankan.</b></p>
+</section>
+
+<section class="card" id="metode"><h2><span>05</span>Metodologi</h2>
+<h3>PSA binary search (chat/play)</h3><p>Uji batas atas-bawah sensitivitas, persempit dengan pilihan pengguna per ronde. Cepat, deterministik.</p>
+<h3>Continuous AI (deep/seek/aim/finder/valo)</h3><p>Optimasi berjalan tiap trial dari trajectory + angular velocity/acceleration, bukan sekali di akhir.</p>
+<h3>Flick / Tracking / Switching + skor</h3><p>Warisan varian awal (index lama): 5 titik sens di sekitar base (0.5×–1.5×), 3 tugas per titik, lalu:</p>
+<pre>score = (flick*w_flick + tracking*w_tracking + switching*w_switching) × 0.85
+        + consistency × 0.15</pre>
+<p>Bobot playstyle: Duelist (flick), Balanced, Sentinel (tracking).</p>
+</section>
+
+<section class="card" id="dpi"><h2><span>06</span>Panduan DPI &amp; sensitivitas</h2>
+<table><tr><th>Multiplier</th><th>Nilai (base 0.4)</th><th>Kapan</th></tr>
+<tr><td>0.5×</td><td>0.2</td><td>Overshoot parah</td></tr>
+<tr><td>0.75×</td><td>0.3</td><td>Agak liar</td></tr>
+<tr><td>1×</td><td>0.4</td><td>Base</td></tr>
+<tr><td>1.25×</td><td>0.5</td><td>Undershoot ringan</td></tr>
+<tr><td>1.5×</td><td>0.6</td><td>Berat / lambat</td></tr></table>
+<p>Tips: kunci DPI dulu (400/800), ubah hanya in-game sens. eDPI = DPI × sens. Samakan eDPI saat pindah varian agar sebanding.</p>
+</section>
+
+<section class="card" id="browser"><h2><span>07</span>Browser &amp; teknis</h2>
+<ul>
+<li><b>Pointer Lock API</b> wajib — klik canvas untuk mengunci mouse. Esc untuk keluar.</li>
+<li><b>WebGL + Three.js r128 CDN</b> (cdnjs) — butuh internet saat pertama load kecuali sudah cache.</li>
+<li><b>Desktop + mouse</b> disarankan. Touchpad / mobile tidak akurat.</li>
+<li>Tidak ada backend / cookie / tracking. Semua kalkulasi di tab lokal.</li>
+<li>Jika embed via iframe, izinkan <code class="inline">allow="pointer-lock"</code>.</li>
+</ul>
+</section>
+
+<section class="card" id="struktur"><h2><span>08</span>Struktur proyek</h2>
+<pre>aimfinder/
+├── public/
+│   ├── index.html   # LANDING (boleh diubah)
+│   ├── docs.html    # DOCS ini (baru)
+│   ├── chat.html … sens.html  # 10 varian (JANGAN diubah)
+│   └── valo.html
+├── Staticfile       # root: public (Wasmer staticfile)
+├── settings/.gitkeep
+├── README.md
+├── LICENSE (MIT)
+└── .gitignore</pre>
+<p>Aturan repo: hanya <code class="inline">public/index.html</code> yang menjadi landing. 10 varian lain frozen.</p>
+</section>
+
+<section class="card" id="deploy"><h2><span>09</span>Deploy Wasmer Edge</h2>
+<ol>
+<li>Push repo ke GitHub (<code class="inline">yuumuu/aimfinder</code>).</li>
+<li>App sudah ada: <b>yuumuu/aimfinder</b> → <a href="https://aimfinder.wasmer.app">aimfinder.wasmer.app</a> (provider <code class="inline">staticfile</code>, <code class="inline">static_dir: public</code>, SWS 2.38.0).</li>
+<li>Deploy manual via CLI (sudah login sebagai <code class="inline">yuumuu</code>):<pre>wasmer deploy --owner yuumuu --app-name aimfinder --non-interactive</pre></li>
+<li>Atau auto-deploy dari dashboard Wasmer → Apps → aimfinder → Redeploy.</li>
+<li>Verifikasi: buka <code class="inline">/index.html</code>, <code class="inline">/docs.html</code>, dan satu varian (<code class="inline">/sens.html</code>).</li>
+</ol>
+<div class="note">Repo sengaja tanpa <code class="inline">wasmer.toml</code> / <code class="inline">app.yaml</code> — Shipit (staticfile) men-generate-nya saat build dari <code class="inline">Staticfile</code>.</div>
+</section>
+
+<section class="card" id="faq"><h2><span>10</span>FAQ</h2>
+<p><b>Mana yang paling akurat?</b><br>Semua estimasi. Mulai dari sens.html (kontras terbaik), bandingkan dengan finder.html.</p>
+<p><b>chat vs play bedanya apa?</b><br>Logika sama (PSA), play lebih embed-friendly.</p>
+<p><b>Butuh install?</b><br>Tidak. Buka URL Wasmer langsung.</p>
+<p><b>Bolehkah ubah varian?</b><br>Sesuai aturan repo saat ini: jangan. Buat file baru jika eksperimen.</p>
+<p><b>Pointer Lock gagal?</b><br>Gunakan Chrome/Edge desktop, HTTPS (Wasmer sudah HTTPS), klik langsung canvas, matikan overlay perekam.</p>
+</section>
+
+<section class="card" id="changelog"><h2><span>11</span>Changelog singkat</h2>
+<ul>
+<li><b>v1 Edge awal</b> — single index 710 baris (Flick/Tracking/Switching + bobot Duelist/Balanced/Sentinel).</li>
+<li><b>10 varian</b> — chat → play → gpt → deep → seek → aim → finder → valo → rant → sens (sesuai logs.txt).</li>
+<li><b>Landing + Docs</b> — index.html menjadi pemilih versi, docs.html dokumentasi lengkap. 10 varian frozen.</li>
+</ul>
+<p>Lisensi MIT © 2026. Disclaimer: hasil browser ≠ kondisi in-game (input lag, engine, resolusi). Fine-tune manual setelahnya.</p>
+</section>
+</article>
+</div>
+</main>
+
+<footer><div class="wrap"><span>© 2026 AimFinder • <a href="./index.html" style="color:var(--text2)">Landing</a> • <a href="https://aimfinder.wasmer.app" style="color:var(--text2)">Live</a></span><span style="font-family:var(--mono)">public/docs.html</span></div></footer>
+</body>
+</html>
