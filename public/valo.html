@@ -1,0 +1,2822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sens Finder 3D — AI Sensitivity Optimizer</title>
+<meta name="theme-color" content="#0f1923">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%230f1923'/><path d='M7 9 L25 9 L23 23 L9 23 Z' fill='none' stroke='%23ff4655' stroke-width='2.5'/><circle cx='16' cy='16' r='2.5' fill='%23ece8e1'/></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0f1923; }
+
+  :root {
+    --v-bg: #0f1923;
+    --v-bg-2: #0a141d;
+    --v-bg-3: #060d13;
+    --v-panel: #1a242f;
+    --v-panel-2: #202d38;
+    --v-panel-3: #2a3844;
+    --v-line: #2f3c47;
+    --v-line-2: #3a4a56;
+    --v-red: #ff4655;
+    --v-red-2: #bd3944;
+    --v-red-3: #7a222a;
+    --v-teal: #00ffba;
+    --v-teal-2: #10b28a;
+    --v-gold: #ffb800;
+    --v-text: #ece8e1;
+    --v-text-2: #c8cfca;
+    --v-muted: #768079;
+    --v-muted-2: #4f5a62;
+    --v-muted-3: #2f3c47;
+    --mono: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', 'Courier New', monospace;
+    --sans: 'Tungsten', 'Oswald', 'Impact', 'Arial Narrow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  }
+
+  /* ============ LOADER ============ */
+  #sf-loader { position: fixed; inset: 0; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: #0f1923; color: var(--v-text); font-family: var(--mono); transition: opacity .4s; }
+  #sf-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  #sf-loader .spin-wrap { width: 44px; height: 44px; position: relative; }
+  #sf-loader .spin-wrap::before, #sf-loader .spin-wrap::after { content: ''; position: absolute; inset: 0; border: 2px solid transparent; }
+  #sf-loader .spin-wrap::before { border-top-color: var(--v-red); border-radius: 50%; animation: spin .9s linear infinite; }
+  #sf-loader .spin-wrap::after { border-bottom-color: var(--v-teal); border-radius: 50%; animation: spin 1.4s linear infinite reverse; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #sf-loader .brand { font-family: var(--sans); font-weight: 700; letter-spacing: 4px; font-size: 18px; color: var(--v-red); text-transform: uppercase; }
+  #sf-loader .status { font-size: 11px; color: var(--v-muted); letter-spacing: 2px; text-transform: uppercase; }
+
+  /* ============ ROOT ============ */
+  #sf-root { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; background: var(--v-bg); color: var(--v-text); font-family: var(--body); display: flex; flex-direction: column; overflow: hidden; }
+  #sf-root * { box-sizing: border-box; }
+
+  /* ============ HEADER (Valorant style) ============ */
+  .v-header {
+    flex-shrink: 0;
+    display: flex; align-items: stretch; height: 56px;
+    background: var(--v-bg-3);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    z-index: 20; position: relative;
+  }
+  .v-brand {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 24px;
+    background: linear-gradient(135deg, var(--v-red) 0%, var(--v-red-2) 100%);
+    position: relative;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+    padding-right: 40px;
+    z-index: 2;
+  }
+  .v-brand-mark {
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--v-text);
+  }
+  .v-brand-title {
+    font-family: var(--sans);
+    font-weight: 700; font-size: 17px;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--v-text); line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .v-header-spacer { flex: 1; }
+  .v-header-actions { display: flex; align-items: center; gap: 4px; padding: 0 20px; }
+  .v-icon-btn {
+    width: 36px; height: 36px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--v-text-2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  }
+  .v-icon-btn:hover { background: rgba(255,70,85,0.12); border-color: var(--v-red); color: var(--v-red); }
+  .v-icon-btn:active { transform: scale(.94); }
+
+  /* ============ BODY ============ */
+  .v-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 28px 32px 32px; display: flex; flex-direction: column; }
+  .v-body.no-scroll { overflow: hidden; padding: 0; }
+  .v-body::-webkit-scrollbar { width: 8px; }
+  .v-body::-webkit-scrollbar-track { background: transparent; }
+  .v-body::-webkit-scrollbar-thumb { background: var(--v-line); }
+  .v-body::-webkit-scrollbar-thumb:hover { background: var(--v-line-2); }
+  .v-container { max-width: 1280px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ============ TYPOGRAPHY ============ */
+  .v-hero { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; position: relative; padding-left: 20px; }
+  .v-hero::before {
+    content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 4px;
+    background: var(--v-red);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), 0 100%);
+  }
+  .v-title {
+    font-family: var(--sans);
+    font-size: 32px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    line-height: 1; color: var(--v-text);
+  }
+  .v-sub {
+    color: var(--v-text-2); font-size: 13px;
+    line-height: 1.6; max-width: 760px;
+  }
+  .v-sub strong { color: var(--v-text); font-weight: 700; }
+  .v-sub em { color: var(--v-teal); font-style: normal; }
+
+  .v-label {
+    font-family: var(--sans);
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--v-muted);
+    font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 8px;
+  }
+  .v-label .v-icon { color: var(--v-red); }
+
+  .v-kbd {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; padding: 0 6px;
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+    background: rgba(255,255,255,0.06);
+    color: var(--v-text);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+  }
+
+  /* ============ PANELS (Valorant angular style) ============ */
+  .v-panel {
+    background: var(--v-panel);
+    position: relative;
+    display: flex; flex-direction: column;
+    padding: 20px;
+    gap: 14px;
+    border-left: 3px solid var(--v-red);
+  }
+  .v-panel::before {
+    content: ''; position: absolute; inset: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,70,85,0.03) 0%, transparent 40%);
+  }
+  .v-panel.neutral { border-left-color: var(--v-teal); }
+  .v-panel.neutral::before { background: linear-gradient(135deg, rgba(0,255,186,0.03) 0%, transparent 40%); }
+  .v-panel.hollow { border-left-color: var(--v-line-2); background: var(--v-bg-2); }
+  .v-panel.hollow::before { background: none; }
+
+  .v-panel-header {
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .v-panel-header .v-icon { color: var(--v-red); }
+  .v-panel-title {
+    font-family: var(--sans);
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--v-text);
+  }
+  .v-panel-sub { font-family: var(--mono); font-size: 10.5px; color: var(--v-muted); margin-left: auto; letter-spacing: 1px; text-transform: uppercase; }
+
+  .v-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .v-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .v-field { display: flex; flex-direction: column; }
+
+  /* ============ INPUTS ============ */
+  .v-input, .v-textarea {
+    background: var(--v-bg-2);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--v-text);
+    padding: 11px 14px;
+    font-family: var(--mono);
+    font-size: 14px;
+    outline: none;
+    transition: all .15s;
+    width: 100%;
+    letter-spacing: .5px;
+  }
+  .v-input:focus, .v-textarea:focus {
+    border-color: var(--v-red);
+    background: rgba(255,70,85,0.04);
+    box-shadow: 0 0 0 2px rgba(255,70,85,0.15);
+  }
+  .v-textarea { resize: vertical; min-height: 56px; font-size: 11.5px; line-height: 1.5; }
+
+  /* ============ BUTTONS ============ */
+  .v-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--v-red);
+    color: var(--v-text);
+    border: none;
+    padding: 12px 24px;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .12s;
+    clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+    position: relative;
+    white-space: nowrap;
+  }
+  .v-btn:hover:not(:disabled) { background: #ff5d6b; }
+  .v-btn:active:not(:disabled) { transform: translateY(1px); }
+  .v-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .v-btn.secondary { background: rgba(255,255,255,0.06); color: var(--v-text); border: 1px solid rgba(255,255,255,0.12); }
+  .v-btn.secondary:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+  .v-btn.teal { background: var(--v-teal); color: var(--v-bg); }
+  .v-btn.teal:hover:not(:disabled) { background: #1fffc6; }
+  .v-btn.ghost { background: transparent; color: var(--v-text-2); border: 1px solid rgba(255,255,255,0.1); }
+  .v-btn.ghost:hover:not(:disabled) { background: rgba(255,255,255,0.05); color: var(--v-text); }
+  .v-btn.danger { background: transparent; color: var(--v-red); border: 1px solid rgba(255,70,85,0.4); }
+  .v-btn.danger:hover:not(:disabled) { background: rgba(255,70,85,0.1); }
+  .v-btn.sm { padding: 8px 16px; font-size: 12px; letter-spacing: 1.5px; }
+  .v-btn.lg { padding: 16px 40px; font-size: 17px; letter-spacing: 3px; clip-path: polygon(16px 0, 100% 0, calc(100% - 16px) 100%, 0 100%); }
+  .v-btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .v-error { color: var(--v-red); font-size: 12px; font-family: var(--mono); min-height: 16px; }
+
+  /* ============ RADIO / OPTIONS ============ */
+  .v-opt-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .v-opt {
+    flex: 1; min-width: 90px;
+    background: var(--v-bg-2);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all .15s;
+    text-align: center;
+    position: relative;
+    user-select: none;
+  }
+  .v-opt:hover { border-color: rgba(255,255,255,0.2); background: var(--v-panel-2); }
+  .v-opt.selected {
+    background: rgba(255,70,85,0.08);
+    border-color: var(--v-red);
+  }
+  .v-opt.selected::after {
+    content: ''; position: absolute; top: 4px; right: 4px;
+    width: 6px; height: 6px; background: var(--v-red);
+    box-shadow: 0 0 8px var(--v-red);
+  }
+  .v-opt-title { font-family: var(--sans); font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+  .v-opt-desc { font-family: var(--mono); font-size: 10px; color: var(--v-muted); letter-spacing: .5px; margin-top: 2px; }
+
+  /* ============ TABS ============ */
+  .v-tabs { display: flex; gap: 2px; background: var(--v-bg-2); padding: 3px; }
+  .v-tab {
+    flex: 1;
+    padding: 9px 12px;
+    background: transparent;
+    border: none;
+    color: var(--v-muted);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  }
+  .v-tab:hover { color: var(--v-text-2); background: rgba(255,255,255,0.03); }
+  .v-tab.active { background: var(--v-panel-2); color: var(--v-red); }
+
+  /* ============ CROSSHAIR PREVIEW ============ */
+  .v-crosshair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .v-crosshair-preview {
+    background: radial-gradient(ellipse at center, #1a2632 0%, #0a141d 100%);
+    border: 1px solid var(--v-line);
+    min-height: 170px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .v-crosshair-preview::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 22px 22px; pointer-events: none;
+  }
+  .v-crosshair-preview::after {
+    content: ''; position: absolute; top: 8px; left: 8px;
+    width: 12px; height: 12px;
+    border-top: 2px solid var(--v-red);
+    border-left: 2px solid var(--v-red);
+  }
+  .v-crosshair-preview > svg { position: relative; z-index: 1; }
+
+  /* ============ SLIDERS ============ */
+  .v-slider-row { display: flex; align-items: center; gap: 10px; }
+  .v-slider-label {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--v-muted); width: 90px; flex-shrink: 0;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .v-slider {
+    flex: 1; -webkit-appearance: none; appearance: none;
+    height: 3px; background: var(--v-panel-3);
+    outline: none; cursor: pointer;
+  }
+  .v-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 12px; height: 16px;
+    background: var(--v-red);
+    cursor: pointer; border: none;
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  }
+  .v-slider::-moz-range-thumb {
+    width: 12px; height: 16px;
+    background: var(--v-red); cursor: pointer;
+    border: none;
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  }
+  .v-slider-val { font-family: var(--mono); font-size: 11px; color: var(--v-text-2); width: 42px; text-align: right; flex-shrink: 0; }
+
+  /* ============ TOGGLES ============ */
+  .v-toggles { display: flex; gap: 8px; flex-wrap: wrap; }
+  .v-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 12px;
+    background: var(--v-bg-2);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--v-muted); font-size: 11.5px;
+    font-family: var(--sans); font-weight: 700;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    cursor: pointer; transition: all .15s; user-select: none;
+  }
+  .v-toggle:hover { border-color: rgba(255,255,255,0.2); color: var(--v-text-2); }
+  .v-toggle.active { background: rgba(0,255,186,0.08); border-color: var(--v-teal); color: var(--v-teal); }
+  .v-toggle-dot { width: 6px; height: 6px; background: var(--v-muted-2); transition: all .15s; }
+  .v-toggle.active .v-toggle-dot { background: var(--v-teal); box-shadow: 0 0 8px var(--v-teal); }
+
+  /* ============ COLORS ============ */
+  .v-color-row { display: flex; gap: 5px; flex-wrap: wrap; }
+  .v-color {
+    width: 24px; height: 24px; cursor: pointer;
+    border: 2px solid transparent; transition: all .15s;
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  }
+  .v-color:hover { transform: scale(1.1); }
+  .v-color.active { border-color: var(--v-text); box-shadow: 0 0 0 2px var(--v-bg), 0 0 0 3px var(--v-text); }
+
+  /* ============ INFO ============ */
+  .v-info {
+    background: rgba(0,255,186,0.05);
+    border-left: 3px solid var(--v-teal);
+    padding: 11px 14px;
+    font-size: 12px; line-height: 1.55;
+    color: var(--v-text-2);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .v-info .v-icon { color: var(--v-teal); flex-shrink: 0; margin-top: 1px; }
+  .v-warn {
+    background: rgba(255,184,0,0.06);
+    border-left: 3px solid var(--v-gold);
+    padding: 11px 14px;
+    font-size: 12px; line-height: 1.55;
+    color: var(--v-text-2);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .v-warn .v-icon { color: var(--v-gold); flex-shrink: 0; margin-top: 1px; }
+
+  /* ============ SHORTCUTS ============ */
+  .v-shortcuts { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+  .v-shortcut { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--v-text-2); font-family: var(--mono); }
+
+  /* ============ DETAILS ============ */
+  .v-details { background: var(--v-bg-2); border-left: 3px solid var(--v-line-2); }
+  .v-details > summary {
+    cursor: pointer; padding: 12px 16px;
+    font-family: var(--sans); font-size: 12.5px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--v-text-2);
+    display: flex; align-items: center; gap: 8px;
+    list-style: none; user-select: none;
+  }
+  .v-details > summary::-webkit-details-marker { display: none; }
+  .v-details > summary::before { content: '▸'; color: var(--v-red); transition: transform .2s; display: inline-block; }
+  .v-details[open] > summary::before { transform: rotate(90deg); }
+  .v-details > summary:hover { color: var(--v-text); }
+  .v-details-body { padding: 16px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px; }
+
+  /* ============ VAULT ============ */
+  .v-vault-list { display: flex; flex-direction: column; gap: 6px; }
+  .v-vault-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: var(--v-bg-2);
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: all .15s;
+  }
+  .v-vault-item:hover { border-color: rgba(255,255,255,0.15); background: var(--v-panel-2); }
+  .v-vault-item-info { flex: 1; min-width: 0; }
+  .v-vault-item-title { font-family: var(--sans); font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .v-vault-item-meta { font-family: var(--mono); font-size: 10.5px; color: var(--v-muted); margin-top: 2px; }
+  .v-vault-empty { padding: 16px; text-align: center; font-family: var(--mono); font-size: 11.5px; color: var(--v-muted); }
+
+  /* ============ HISTORY CHART ============ */
+  .v-history { background: var(--v-bg-2); border: 1px solid var(--v-line); padding: 12px; overflow: hidden; }
+  .v-history svg { display: block; width: 100%; height: auto; }
+
+  /* ============ HEATMAP ============ */
+  .v-heatmap-wrap { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start; }
+  .v-heatmap-svg { background: radial-gradient(ellipse at center, #1a2632 0%, #0a141d 100%); border: 1px solid var(--v-line); }
+  .v-heatmap-legend { display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--v-text-2); }
+  .v-legend-row { display: flex; align-items: center; gap: 8px; }
+  .v-legend-dot { width: 10px; height: 10px; }
+
+  /* ============ MODAL ============ */
+  .v-modal-bg { position: fixed; inset: 0; z-index: 100; background: rgba(6,13,19,0.9); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .v-modal { background: var(--v-panel); border-left: 3px solid var(--v-red); max-width: 520px; width: 100%; padding: 24px; display: flex; flex-direction: column; gap: 14px; max-height: 90vh; overflow-y: auto; }
+  .v-modal-title { font-family: var(--sans); font-size: 20px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+  .v-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ============ TEST SCREEN ============ */
+  #scene-wrap { position: absolute; inset: 0; overflow: hidden; background: #05070a; display: flex; align-items: center; justify-content: center; z-index: 0; }
+  #scene-wrap canvas { display: block; width: 100% !important; height: 100% !important; }
+  #crosshair-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; display: flex; align-items: center; justify-content: center; }
+  #crosshair-container.miss > svg rect, #crosshair-container.miss > svg circle { fill: var(--v-red) !important; }
+
+  .v-hud { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; padding: 18px 24px; z-index: 5; pointer-events: none; font-family: var(--mono); color: var(--v-muted); text-shadow: 0 2px 6px rgba(0,0,0,0.9); }
+  .v-hud-item { display: flex; flex-direction: column; gap: 2px; }
+  .v-hud-label { font-family: var(--sans); font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.35); text-transform: uppercase; font-weight: 700; }
+  .v-hud-value { font-size: 17px; color: var(--v-text); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+  .v-hud-value.red { color: var(--v-red); }
+  .v-hud-value.teal { color: var(--v-teal); }
+  .v-hud-center { text-align: center; }
+  .v-hud-right { text-align: right; align-items: flex-end; }
+
+  /* Streak badge */
+  .v-streak {
+    position: absolute; top: 100px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 8; pointer-events: none;
+    font-family: var(--sans); font-weight: 700;
+    font-size: 22px; letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--v-gold);
+    text-shadow: 0 2px 12px rgba(255,184,0,0.6), 0 0 3px rgba(0,0,0,1);
+    opacity: 0;
+    transition: opacity .2s, transform .2s;
+  }
+  .v-streak.on { opacity: 1; animation: streakPulse .35s ease-out; }
+  @keyframes streakPulse {
+    0% { transform: translateX(-50%) scale(0.7); }
+    60% { transform: translateX(-50%) scale(1.15); }
+    100% { transform: translateX(-50%) scale(1); }
+  }
+
+  .v-hud-mute { position: absolute; bottom: 22px; right: 22px; z-index: 7; width: 38px; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--v-text-2); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .15s; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+  .v-hud-mute:hover { background: rgba(255,70,85,0.15); color: var(--v-red); }
+  .v-hud-mute.muted { color: var(--v-muted-2); }
+
+  #realtime-graph { position: absolute; bottom: 22px; left: 22px; z-index: 7; width: 220px; height: 70px; background: rgba(6,13,19,0.7); border: 1px solid rgba(255,255,255,0.08); display: none; }
+  #realtime-graph.on { display: block; }
+
+  .v-timer-bar { position: absolute; top: 0; left: 0; height: 3px; background: var(--v-red); z-index: 6; transition: width .1s linear; box-shadow: 0 0 12px rgba(255,70,85,0.7); }
+  .v-timer-big { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 68px; font-weight: 700; color: rgba(236,232,225,0.08); letter-spacing: -3px; z-index: 4; pointer-events: none; font-variant-numeric: tabular-nums; }
+  .v-timer-big.warning { color: rgba(255,70,85,0.22); }
+
+  .v-countdown-big { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: var(--sans); font-size: 180px; font-weight: 900; color: var(--v-red); z-index: 12; pointer-events: none; text-shadow: 0 0 60px rgba(255,70,85,0.8), 0 0 8px rgba(0,0,0,1); opacity: 0; letter-spacing: -6px; }
+  .v-countdown-big.show { animation: cdPop .8s cubic-bezier(.2, .8, .3, 1); }
+  @keyframes cdPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+    35% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+  }
+
+  #test-overlay { position: absolute; inset: 0; z-index: 15; background: rgba(6,13,19,0.92); backdrop-filter: blur(10px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 40px 32px; overflow-y: auto; }
+  #test-overlay.hidden { display: none; }
+
+  .v-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; background: rgba(255,70,85,0.1); border: 1px solid rgba(255,70,85,0.35); color: var(--v-red); font-family: var(--sans); font-size: 11px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
+  .v-badge.success { background: rgba(0,255,186,0.1); border-color: rgba(0,255,186,0.35); color: var(--v-teal); }
+  .v-badge.danger { background: rgba(255,70,85,0.15); border-color: var(--v-red); color: var(--v-red); }
+
+  .v-overlay-title { font-family: var(--sans); font-size: 34px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; max-width: 620px; line-height: 1.1; }
+  .v-overlay-desc { color: var(--v-text-2); font-size: 13.5px; max-width: 540px; line-height: 1.6; }
+
+  .v-overlay-stats { display: flex; gap: 32px; padding: 16px 28px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); }
+  .v-overlay-stat { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+  .v-overlay-stat-label { font-family: var(--sans); font-size: 10px; letter-spacing: 2px; color: var(--v-muted); text-transform: uppercase; font-weight: 700; }
+  .v-overlay-stat-value { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--v-text); font-variant-numeric: tabular-nums; }
+  .v-overlay-stat-value.red { color: var(--v-red); }
+  .v-overlay-stat-value.teal { color: var(--v-teal); }
+  .v-overlay-stat-value.gold { color: var(--v-gold); }
+
+  .v-overlay-hint { display: flex; align-items: center; gap: 8px; color: var(--v-text-2); font-size: 12.5px; padding: 8px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+  .v-overlay-cd { font-family: var(--mono); font-size: 12px; color: var(--v-muted); }
+  .v-overlay-cd b { color: var(--v-red); font-weight: 700; }
+
+  .v-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 360px; margin-top: 8px; }
+  .v-actions .v-btn { justify-content: flex-start; padding: 12px 20px; width: 100%; text-align: left; letter-spacing: 1.5px; }
+
+  .v-pause-ch { display: grid; grid-template-columns: 180px 1fr; gap: 20px; width: 100%; max-width: 640px; padding: 16px; background: rgba(255,255,255,0.02); border-left: 3px solid var(--v-red); text-align: left; }
+  .v-pause-ch-preview { background: radial-gradient(ellipse at center, #1a2632 0%, #0a141d 100%); border: 1px solid var(--v-line); min-height: 150px; display: flex; align-items: center; justify-content: center; }
+  .v-pause-ch-controls { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ============ RESULTS ============ */
+  .v-recommend {
+    background: linear-gradient(135deg, rgba(255,70,85,0.14) 0%, rgba(255,70,85,0.03) 100%);
+    border-left: 4px solid var(--v-red);
+    padding: 24px 28px;
+    position: relative;
+  }
+  .v-recommend::before { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px;
+    background: linear-gradient(135deg, transparent 50%, rgba(255,70,85,0.15) 50%);
+    pointer-events: none;
+  }
+  .v-recommend-label { font-family: var(--sans); font-size: 11px; letter-spacing: 2.5px; color: var(--v-red); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .v-recommend-value { font-family: var(--mono); font-size: 44px; font-weight: 700; letter-spacing: -1.5px; line-height: 1; color: var(--v-text); }
+  .v-recommend-sub { font-family: var(--mono); font-size: 12.5px; color: var(--v-text-2); margin-top: 8px; letter-spacing: .5px; }
+  .v-recommend-delta { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-family: var(--mono); font-size: 11px; margin-top: 10px; letter-spacing: 1px; }
+  .v-recommend-delta.pos { background: rgba(0,255,186,0.1); color: var(--v-teal); }
+  .v-recommend-delta.neg { background: rgba(255,70,85,0.1); color: var(--v-red); }
+
+  .v-grade {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, var(--v-red), var(--v-red-2));
+    font-family: var(--sans); font-weight: 900;
+    font-size: 44px; color: var(--v-text);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  .v-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+  .v-table th, .v-table td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: left; }
+  .v-table th { font-family: var(--sans); color: var(--v-muted); font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 1.5px; background: var(--v-bg-2); position: sticky; top: 0; }
+  .v-table tr.best td { background: rgba(0,255,186,0.06); }
+  .v-table tr.best td:first-child { color: var(--v-teal); font-weight: 700; }
+  .v-table tr.invalid td { opacity: .35; }
+
+  .v-bars { display: flex; flex-direction: column; gap: 6px; }
+  .v-bar-row { display: flex; align-items: center; gap: 10px; }
+  .v-bar-label { font-family: var(--mono); font-size: 10.5px; width: 110px; color: var(--v-muted); flex-shrink: 0; letter-spacing: .5px; }
+  .v-bar-track { flex: 1; height: 12px; background: var(--v-bg-2); overflow: hidden; border: 1px solid rgba(255,255,255,0.04); }
+  .v-bar-fill { height: 100%; background: linear-gradient(90deg, var(--v-red-2), var(--v-red)); transition: width .5s; }
+  .v-bar-fill.teal { background: linear-gradient(90deg, var(--v-teal-2), var(--v-teal)); }
+  .v-bar-val { font-family: var(--mono); font-size: 11px; width: 40px; text-align: right; flex-shrink: 0; color: var(--v-text-2); }
+
+  .v-disclaimer { font-size: 11px; color: var(--v-muted); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 14px; line-height: 1.6; }
+
+  @media (max-width: 900px) {
+    .v-body { padding: 18px; }
+    .v-grid-2, .v-grid-3 { grid-template-columns: 1fr; }
+    .v-crosshair-grid { grid-template-columns: 1fr; }
+    .v-pause-ch { grid-template-columns: 1fr; }
+    .v-heatmap-wrap { grid-template-columns: 1fr; }
+    .v-recommend-value { font-size: 34px; }
+    .v-overlay-title { font-size: 24px; }
+    .v-overlay-stats { gap: 18px; padding: 12px 18px; flex-wrap: wrap; justify-content: center; }
+    .v-title { font-size: 24px; }
+    .v-timer-big { font-size: 42px; top: 50px; }
+    .v-countdown-big { font-size: 110px; }
+    #realtime-graph { width: 160px; height: 56px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sf-loader" role="status" aria-label="Loading">
+  <div class="spin-wrap"></div>
+  <div class="brand">SENS://FINDER</div>
+  <div class="status">Loading optimizer…</div>
+</div>
+
+<div id="sf-root" hidden>
+  <header class="v-header">
+    <div class="v-brand">
+      <div class="v-brand-mark" id="brand-icon"></div>
+      <div class="v-brand-title">Sens://Finder</div>
+    </div>
+    <div class="v-header-spacer"></div>
+    <div class="v-header-actions" id="header-actions"></div>
+  </header>
+  <main class="v-body" id="sf-body"></main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var root = document.getElementById('sf-root');
+  var loader = document.getElementById('sf-loader');
+  var body = document.getElementById('sf-body');
+  var headerActions = document.getElementById('header-actions');
+  var brandIcon = document.getElementById('brand-icon');
+
+  /* ===== ICONS ===== */
+  var ICON_PATHS = {
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    crosshair: '<circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>',
+    play: '<polygon points="6 4 20 12 6 20 6 4"/>',
+    pause: '<rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/>',
+    refresh: '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10"/><path d="M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/>',
+    copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    check: '<polyline points="20 6 9 17 4 12"/>',
+    x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+    info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+    alert: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    maximize: '<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>',
+    chart: '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+    mouse: '<rect x="6" y="3" width="12" height="18" rx="6"/><line x1="12" y1="7" x2="12" y2="11"/>',
+    grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+    arrowRight: '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
+    arrowLeft: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+    home: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+    ruler: '<path d="M21.3 8.7 15.3 2.7a1 1 0 0 0-1.4 0L2.7 13.9a1 1 0 0 0 0 1.4l6 6a1 1 0 0 0 1.4 0L21.3 10a1 1 0 0 0 0-1.3z"/><line x1="7.5" y1="10.5" x2="10.5" y2="7.5"/><line x1="10.5" y1="13.5" x2="13.5" y2="10.5"/><line x1="13.5" y1="16.5" x2="16.5" y2="13.5"/>',
+    volumeOn: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>',
+    volumeOff: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>',
+    eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+    star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+    lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'
+  };
+  function icon(name, size) {
+    size = size || 18;
+    var p = ICON_PATHS[name] || '';
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="v-icon">' + p + '</svg>';
+  }
+
+  /* ===== STORAGE ===== */
+  var STORAGE = {
+    load: function(key, def) {
+      try { var v = localStorage.getItem('sf3d.' + key); return v === null ? def : JSON.parse(v); }
+      catch (e) { return def; }
+    },
+    save: function(key, val) {
+      try { localStorage.setItem('sf3d.' + key, JSON.stringify(val)); } catch (e) {}
+    },
+    remove: function(key) { try { localStorage.removeItem('sf3d.' + key); } catch (e) {} }
+  };
+
+  /* ===== AUDIO ===== */
+  var AudioSys = (function(){
+    var ctx = null, enabled = true;
+    function ensure() { if (ctx) return ctx; try { var AC = window.AudioContext || window.webkitAudioContext; if (AC) ctx = new AC(); } catch (e) {} return ctx; }
+    function unlock() { var c = ensure(); if (c && c.state === 'suspended') c.resume().catch(function(){}); }
+    function tone(freq, dur, type, gv, sweepTo) {
+      if (!enabled) return;
+      var c = ensure(); if (!c) return;
+      try {
+        var osc = c.createOscillator(), gain = c.createGain();
+        osc.type = type || 'sine';
+        var t0 = c.currentTime;
+        osc.frequency.setValueAtTime(freq, t0);
+        if (sweepTo) osc.frequency.exponentialRampToValueAtTime(sweepTo, t0 + dur);
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.linearRampToValueAtTime(gv || 0.1, t0 + 0.004);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(gain); gain.connect(c.destination);
+        osc.start(t0); osc.stop(t0 + dur + 0.02);
+      } catch (e) {}
+    }
+    function noise(dur, gv, hp) {
+      if (!enabled) return;
+      var c = ensure(); if (!c) return;
+      try {
+        var bs = Math.max(1, Math.floor(c.sampleRate * dur));
+        var buf = c.createBuffer(1, bs, c.sampleRate);
+        var d = buf.getChannelData(0);
+        for (var i = 0; i < bs; i++) d[i] = Math.random() * 2 - 1;
+        var src = c.createBufferSource(); src.buffer = buf;
+        var gain = c.createGain(); var t0 = c.currentTime;
+        gain.gain.setValueAtTime(gv || 0.12, t0);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        var f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp || 1500;
+        src.connect(f); f.connect(gain); gain.connect(c.destination);
+        src.start(t0); src.stop(t0 + dur + 0.02);
+      } catch (e) {}
+    }
+    return {
+      unlock: unlock,
+      shoot: function(){ tone(160, 0.05, 'square', 0.06, 50); noise(0.035, 0.07, 1800); },
+      hit: function(){ tone(900, 0.09, 'sine', 0.11, 1400); },
+      miss: function(){ tone(180, 0.09, 'triangle', 0.05, 90); },
+      tick: function(){ tone(700, 0.05, 'sine', 0.07); },
+      tickHigh: function(){ tone(1050, 0.07, 'sine', 0.09); },
+      go: function(){ tone(440, 0.12, 'sine', 0.10, 880); },
+      streak: function(n){ tone(500 + n * 60, 0.14, 'triangle', 0.11, 900 + n * 80); },
+      complete: function(){
+        tone(523, 0.10, 'sine', 0.09);
+        setTimeout(function(){ tone(659, 0.10, 'sine', 0.09); }, 90);
+        setTimeout(function(){ tone(784, 0.18, 'sine', 0.11); }, 180);
+      },
+      setEnabled: function(v){ enabled = !!v; },
+      isEnabled: function(){ return enabled; }
+    };
+  })();
+
+  /* ===== CROSSHAIR ===== */
+  var VALORANT_COLORS = { '0':'#ffffff','1':'#00ff00','2':'#9dff00','3':'#e5ff00','4':'#ffff00','5':'#00ffff','6':'#ff00ff','7':'#ff0000' };
+  var CS2_COLORS = { '0':'#ff0000','1':'#00ff00','2':'#ffff00','3':'#0000ff','4':'#00ffff','5':'#ff00ff' };
+  function defaultCrosshair() {
+    return { color: '#45d6c4', dot: false, outline: true, innerLength: 6, innerThickness: 2, innerOffset: 4, outerLength: 0, outerThickness: 0, outerOffset: 0 };
+  }
+  function parseValorantCode(code) {
+    if (!code) return null;
+    var parts = code.trim().split(';');
+    var known = { c:1, o:1, f:1, '0t':1, '0l':1, '0o':1, '0a':1, '0f':1, '1t':1, '1l':1, '1o':1, '1a':1, '1f':1 };
+    var cfg = defaultCrosshair(); var found = false;
+    for (var i = 0; i < parts.length - 1; i += 2) {
+      var k = parts[i], v = parts[i + 1];
+      if (!known[k]) continue;
+      found = true;
+      switch (k) {
+        case 'c':  cfg.color = VALORANT_COLORS[v] || cfg.color; break;
+        case 'o':  cfg.outline = v === '1'; break;
+        case 'f':  cfg.dot = v === '1'; break;
+        case '0t': cfg.innerThickness = parseFloat(v) || cfg.innerThickness; break;
+        case '0l': cfg.innerLength = (parseFloat(v) || 0) * 2 + 4; break;
+        case '0o': cfg.innerOffset = (parseFloat(v) || 0) * 1.5 + 2; break;
+        case '1t': cfg.outerThickness = parseFloat(v) || 0; break;
+        case '1l': cfg.outerLength = (parseFloat(v) || 0) * 2; break;
+        case '1o': cfg.outerOffset = parseFloat(v) || 0; break;
+      }
+    }
+    return found ? cfg : null;
+  }
+  function parseCS2Code(code) {
+    if (!code) return null;
+    var cfg = defaultCrosshair(); var found = false;
+    var parts = code.split(/[;\n]+/);
+    for (var i = 0; i < parts.length; i++) {
+      var line = parts[i].trim(); if (!line) continue;
+      var m = line.match(/^(cl_[\w_]+)\s+(.+)$/); if (!m) continue;
+      found = true;
+      var k = m[1], v = m[2].replace(/["']/g, '').trim();
+      switch (k) {
+        case 'cl_crosshairsize':      cfg.innerLength = (parseFloat(v) || 2) * 3; break;
+        case 'cl_crosshairgap':       cfg.innerOffset = Math.abs(parseFloat(v) || 0) * 1.5 + 2; break;
+        case 'cl_crosshairthickness': cfg.innerThickness = Math.max(1, parseFloat(v) || 1); break;
+        case 'cl_crosshaircolor':     cfg.color = CS2_COLORS[v] || cfg.color; break;
+        case 'cl_crosshairdot':       cfg.dot = v === '1'; break;
+        case 'cl_crosshair_drawoutline': cfg.outline = v === '1'; break;
+      }
+    }
+    var r = (code.match(/cl_crosshaircolor_r\s+(\d+)/) || [])[1];
+    var g = (code.match(/cl_crosshaircolor_g\s+(\d+)/) || [])[1];
+    var b = (code.match(/cl_crosshaircolor_b\s+(\d+)/) || [])[1];
+    if (r !== undefined && g !== undefined && b !== undefined) cfg.color = 'rgb(' + (r|0) + ',' + (g|0) + ',' + (b|0) + ')';
+    return found ? cfg : null;
+  }
+  function rect(x, y, w, h, fill, stroke, sw) {
+    var s = sw > 0 ? ' stroke="' + stroke + '" stroke-width="' + sw + '"' : '';
+    return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + fill + '"' + s + '/>';
+  }
+  function renderCrosshairSVG(cfg, size) {
+    size = size || 100;
+    var stroke = cfg.outline ? '#000' : 'transparent';
+    var sw = cfg.outline ? 0.8 : 0;
+    var cx = 50, cy = 50;
+    var it = Math.max(0.5, cfg.innerThickness);
+    var il = Math.max(0, cfg.innerLength);
+    var io = Math.max(0, cfg.innerOffset);
+    var ot = Math.max(0, cfg.outerThickness);
+    var ol = Math.max(0, cfg.outerLength);
+    var oo = Math.max(0, cfg.outerOffset);
+    var parts = [];
+    if (ot > 0 && ol > 0) {
+      var oGap = io + il + oo, oStart = oGap, oEnd = oGap + ol;
+      parts.push(rect(cx - ot/2, cy - oEnd, ot, ol, cfg.color, stroke, sw));
+      parts.push(rect(cx - ot/2, cy + oStart, ot, ol, cfg.color, stroke, sw));
+      parts.push(rect(cx - oEnd, cy - ot/2, ol, ot, cfg.color, stroke, sw));
+      parts.push(rect(cx + oStart, cy - ot/2, ol, ot, cfg.color, stroke, sw));
+    }
+    if (il > 0) {
+      var start = io, end = io + il;
+      parts.push(rect(cx - it/2, cy - end, it, il, cfg.color, stroke, sw));
+      parts.push(rect(cx - it/2, cy + start, it, il, cfg.color, stroke, sw));
+      parts.push(rect(cx - end, cy - it/2, il, it, cfg.color, stroke, sw));
+      parts.push(rect(cx + start, cy - it/2, il, it, cfg.color, stroke, sw));
+    }
+    if (cfg.dot) {
+      var dr = Math.max(0.8, cfg.innerThickness / 2 + 0.3);
+      parts.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + dr + '" fill="' + cfg.color + '" stroke="' + stroke + '" stroke-width="' + sw + '"/>');
+    }
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 100 100" style="overflow:visible;display:block;filter:drop-shadow(0 0 1px rgba(0,0,0,0.9))">' + parts.join('') + '</svg>';
+  }
+  function parseColorRGB(c) {
+    if (!c) return { r: 0, g: 255, b: 0 };
+    if (c.charAt(0) === '#') {
+      var h = c.slice(1);
+      if (h.length === 3) h = h.charAt(0)+h.charAt(0)+h.charAt(1)+h.charAt(1)+h.charAt(2)+h.charAt(2);
+      return { r: parseInt(h.substr(0,2),16), g: parseInt(h.substr(2,2),16), b: parseInt(h.substr(4,2),16) };
+    }
+    var m = c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (m) return { r: +m[1], g: +m[2], b: +m[3] };
+    return { r: 0, g: 255, b: 0 };
+  }
+  function generateCS2Commands(cfg) {
+    var c = parseColorRGB(cfg.color);
+    var size = Math.max(1, Math.round(cfg.innerLength / 3));
+    var gap = Math.max(-5, Math.round(cfg.innerOffset - 2));
+    var thickness = Math.max(0.5, cfg.innerThickness / 2);
+    return 'cl_crosshairsize ' + size + '; cl_crosshairgap ' + gap + '; cl_crosshairthickness ' + thickness + '; cl_crosshairdot ' + (cfg.dot?1:0) + '; cl_crosshair_drawoutline ' + (cfg.outline?1:0) + '; cl_crosshaircolor_r ' + c.r + '; cl_crosshaircolor_g ' + c.g + '; cl_crosshaircolor_b ' + c.b + '; cl_crosshaircolor 5';
+  }
+
+  /* ===== MATH ===== */
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  function sleep(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
+  function gauss(mu, sd) {
+    var u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return mu + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function cm360(sens, dpi, yaw) { return (360 * 2.54) / (sens * dpi * yaw); }
+
+  /* =========================================================================
+   *  AI CORE — 1D eDPI Gaussian Kernel Regression
+   *  ------------------------------------------------------------------------
+   *  Karena rotasi FPS hanya bergantung pada eDPI = sens × DPI, optimizer
+   *  memetakan permukaan skor sebagai f(eDPI) 1D. Ini menghilangkan ridge
+   *  ambiguity yang bikin drift jauh di versi 2D sebelumnya.
+   * =======================================================================*/
+  function kKernel1D(d, sigma) {
+    var a = d / sigma;
+    return Math.exp(-0.5 * a * a);
+  }
+  function kRegress1D(obs, edpi, sigma) {
+    var n = obs.length, i, k, num = 0, den = 0;
+    if (n === 0) return { mean: 0, variance: 2500, weight: 0 };
+    for (i = 0; i < n; i++) {
+      k = kKernel1D(edpi - obs[i].edpi, sigma);
+      num += k * obs[i].score;
+      den += k;
+    }
+    if (den < 1e-9) return { mean: 0, variance: 2500, weight: 0 };
+    var mean = num / den, v = 0;
+    for (i = 0; i < n; i++) {
+      k = kKernel1D(edpi - obs[i].edpi, sigma);
+      v += k * (obs[i].score - mean) * (obs[i].score - mean);
+    }
+    return { mean: mean, variance: v / den, weight: den };
+  }
+  function kOptimize1D(obs, edpiMin, edpiMax, sigma) {
+    if (obs.length === 0) return { edpi: (edpiMin + edpiMax) / 2, score: 0, variance: 0, weight: 0 };
+    var N = 300;
+    var step = (edpiMax - edpiMin) / N;
+    var bestEdpi = edpiMin, bestScore = -1e18;
+    for (var i = 0; i <= N; i++) {
+      var e = edpiMin + i * step;
+      var r = kRegress1D(obs, e, sigma);
+      if (r.mean > bestScore) { bestScore = r.mean; bestEdpi = e; }
+    }
+    var lo = Math.max(edpiMin, bestEdpi - step);
+    var hi = Math.min(edpiMax, bestEdpi + step);
+    for (var j = 0; j <= 60; j++) {
+      var e2 = lo + (hi - lo) * j / 60;
+      var r2 = kRegress1D(obs, e2, sigma);
+      if (r2.mean > bestScore) { bestScore = r2.mean; bestEdpi = e2; }
+    }
+    var rFinal = kRegress1D(obs, bestEdpi, sigma);
+    return { edpi: bestEdpi, score: bestScore, variance: rFinal.variance, weight: rFinal.weight };
+  }
+  function kAcquire1D(obs, edpiMin, edpiMax, sigma, kappa) {
+    if (!obs || obs.length === 0) return edpiMin + Math.random() * (edpiMax - edpiMin);
+    var range = edpiMax - edpiMin;
+    var best = null, bestU = -Infinity;
+    for (var i = 0; i < 500; i++) {
+      var e = edpiMin + Math.random() * range;
+      var r = kRegress1D(obs, e, sigma);
+      var dmin = Infinity;
+      for (var j = 0; j < obs.length; j++) {
+        var d = Math.abs(e - obs[j].edpi) / range;
+        if (d < dmin) dmin = d;
+      }
+      var u = r.mean + kappa * dmin;
+      if (u > bestU) { bestU = u; best = e; }
+    }
+    return best;
+  }
+
+  /* ===== CONFIG ===== */
+  var GAMES = {
+    valorant: { yaw: 0.07,  label: 'Valorant', proEdpi: 280, yawLabel: '0.07',  rank: 'BRONZE III' },
+    cs2:      { yaw: 0.022, label: 'CS2',      proEdpi: 880, yawLabel: '0.022', rank: 'NOVA I' }
+  };
+  var DISTANCE_MODES = {
+    close: { label: 'Close', minDist: 5,  maxDist: 9,  desc: '5–9m' },
+    mid:   { label: 'Mid',   minDist: 9,  maxDist: 15, desc: '9–15m' },
+    long:  { label: 'Long',  minDist: 15, maxDist: 22, desc: '15–22m' },
+    mixed: { label: 'Mixed', minDist: 5,  maxDist: 22, desc: 'Random' }
+  };
+  var TASK_MODES = {
+    flick:    { label: 'Flick',    desc: 'Big jumps' },
+    micro:    { label: 'Micro',    desc: 'Small adj.' },
+    tracking: { label: 'Tracking', desc: 'Follow' },
+    mixed:    { label: 'Mixed',    desc: 'All three' }
+  };
+  var FOV_PRESETS = {
+    valorant:  { label: 'Valorant 103°', hFov: 103 },
+    cs2:       { label: 'CS2 90°',       hFov: 90 },
+    wide:      { label: 'Wide 110°',     hFov: 110 },
+    cinematic: { label: 'Cinematic 70°', hFov: 70 }
+  };
+
+  var TOTAL_TRIALS = 12, EXPLORE_TRIALS = 4, TEST_DURATION = 12000, ACTIVE_CD = 3;
+  var TRIAL_COMPLETE_AUTO_SEC = 10;
+  var WARMUP_DURATION = 8000;
+  var SIGMA_E = 120;              /* eDPI bandwidth */
+  var UCB_KAPPA = 16;
+  var SMOOTH_REF = 300, RT_REF = 800, DEV_REF = 0.30, RT_MOVE_THRESH = 1.0, TELEM_CAP = 8192;
+  var TRACK_THRESH_RAD = 0.09;
+  var AFK_THRESH = 3;
+  var HISTORY_MAX = 20;
+  var GRAPH_UPDATE_MS = 100;
+
+  /* ===== PROFILE SYSTEM ===== */
+  function defaultProfile(game) {
+    return {
+      game: game,
+      dpi: 800,
+      sens: game === 'valorant' ? 0.4 : 1.5,
+      crosshair: defaultCrosshair(),
+      hFov: game === 'valorant' ? 103 : 90,
+      taskMix: 'mixed',
+      distanceMode: 'mixed',
+      warmupEnabled: true,
+      soundEnabled: true,
+      graphEnabled: false
+    };
+  }
+  var profiles = (function loadProfiles() {
+    var p = STORAGE.load('profiles', null);
+    if (p && p.games && p.games.valorant && p.games.cs2) return p;
+    return {
+      activeGame: 'valorant',
+      games: { valorant: defaultProfile('valorant'), cs2: defaultProfile('cs2') }
+    };
+  })();
+  function saveProfiles() { STORAGE.save('profiles', profiles); }
+  function getProfile() { return profiles.games[profiles.activeGame]; }
+
+  /* ===== SESSION HISTORY ===== */
+  var sessionHistory = STORAGE.load('history', []);
+  function pushHistory(entry) {
+    sessionHistory.push(entry);
+    if (sessionHistory.length > HISTORY_MAX) sessionHistory = sessionHistory.slice(-HISTORY_MAX);
+    STORAGE.save('history', sessionHistory);
+  }
+
+  /* ===== SENS VAULT ===== */
+  var vault = STORAGE.load('vault', []);
+  function saveVault() { STORAGE.save('vault', vault); }
+
+  /* ===== STATE ===== */
+  var state = {
+    screen: 'setup',
+    game: profiles.activeGame,
+    dpi: 800, baseSens: 0.4, baseDpi: 800,
+    crosshair: defaultCrosshair(),
+    crosshairTab: 'valorant',
+    distanceMode: 'mixed',
+    taskMix: 'mixed',
+    soundEnabled: true,
+    warmupEnabled: true,
+    graphEnabled: false,
+    hFov: 103,
+    /* eDPI-based ranges (new) */
+    edpiMin: 0, edpiMax: 0, baseEdpi: 0,
+    trials: [], observations: [], optimum: null,
+    scene: null, camera: null, renderer: null, target: null, raycaster: null,
+    testActive: false, testHits: 0, testMisses: 0, testWeightedHits: 0,
+    testRt: [], testStartTime: 0, targetSpawnTime: 0, targetReacted: false,
+    testSens: 0, yaw: 0, pitch: 0,
+    animId: null, hudTimer: null, testTimer: null,
+    trialResolve: null, pauseReason: '',
+    worker: null, pending: {}, reqId: 0,
+    currentTaskType: 'flick',
+    isWarmup: false,
+    trackBaseX: 0, trackBaseY: 0, trackAmpX: 0, trackAmpY: 0,
+    trackFx: 0, trackFy: 0, trackPhase: 0,
+    trackOnTarget: 0, trackTotal: 0,
+    lastTargetX: 0, lastTargetY: 0,
+    missData: [],
+    consecutiveBad: 0,
+    graphCanvas: null, graphCtx: null, graphLastRender: 0,
+    graphOmega: new Float32Array(120), graphDist: new Float32Array(120), graphIdx: 0,
+    /* Streak */
+    streak: 0,
+    _loadingProfile: false
+  };
+
+  function applyProfileToState() {
+    state._loadingProfile = true;
+    var p = getProfile();
+    state.game = profiles.activeGame;
+    state.dpi = p.dpi;
+    state.baseSens = p.sens;
+    state.crosshair = Object.assign(defaultCrosshair(), p.crosshair || {});
+    state.hFov = p.hFov;
+    state.taskMix = p.taskMix;
+    state.distanceMode = p.distanceMode;
+    state.warmupEnabled = p.warmupEnabled;
+    state.soundEnabled = p.soundEnabled;
+    state.graphEnabled = p.graphEnabled;
+    AudioSys.setEnabled(state.soundEnabled);
+    state._loadingProfile = false;
+  }
+  function saveCurrentToProfile() {
+    if (state._loadingProfile) return;
+    var p = getProfile();
+    p.dpi = state.dpi;
+    p.sens = state.baseSens;
+    p.crosshair = state.crosshair;
+    p.hFov = state.hFov;
+    p.taskMix = state.taskMix;
+    p.distanceMode = state.distanceMode;
+    p.warmupEnabled = state.warmupEnabled;
+    p.soundEnabled = state.soundEnabled;
+    p.graphEnabled = state.graphEnabled;
+    profiles.activeGame = state.game;
+    saveProfiles();
+  }
+  function switchGame(newGame) {
+    if (newGame === state.game) return;
+    saveCurrentToProfile();
+    profiles.activeGame = newGame;
+    saveProfiles();
+    applyProfileToState();
+  }
+  applyProfileToState();
+
+  /* ===== TELEMETRY ===== */
+  var telemetry = {
+    n: 0, maxGap: 0,
+    t: new Float64Array(TELEM_CAP), qx: new Float32Array(TELEM_CAP),
+    qy: new Float32Array(TELEM_CAP), qz: new Float32Array(TELEM_CAP),
+    qw: new Float32Array(TELEM_CAP), w: new Float32Array(TELEM_CAP),
+    a: new Float32Array(TELEM_CAP), dev: new Float32Array(TELEM_CAP),
+    dist: new Float32Array(TELEM_CAP)
+  };
+  var _prevLogged = false, _prevTime = 0, _omegaEMA = 0, _alphaEMA = 0, _prevOmegaEMA = 0;
+  function resetTelemetry() {
+    telemetry.n = 0; telemetry.maxGap = 0;
+    _prevLogged = false; _prevTime = 0;
+    _omegaEMA = 0; _alphaEMA = 0; _prevOmegaEMA = 0;
+  }
+  var AXIS_X = new THREE.Vector3(1, 0, 0);
+  var AXIS_Y = new THREE.Vector3(0, 1, 0);
+  var _qYaw = new THREE.Quaternion();
+  var _qPitch = new THREE.Quaternion();
+  var _prevQ = new THREE.Quaternion();
+  var _prevQInv = new THREE.Quaternion();
+  var _dq = new THREE.Quaternion();
+  var _fwd = new THREE.Vector3();
+  var _toT = new THREE.Vector3();
+  var _cross = new THREE.Vector3();
+  var _right = new THREE.Vector3();
+  var _up = new THREE.Vector3();
+
+  /* Rotation: since trialDpi always == userDpi now, factor is 1. */
+  function applyLook(movementX, movementY) {
+    var game = GAMES[state.game];
+    var perCountRad = state.testSens * game.yaw * (Math.PI / 180);
+    state.yaw   -= movementX * perCountRad;
+    state.pitch -= movementY * perCountRad;
+    state.pitch = clamp(state.pitch, -Math.PI / 2.3, Math.PI / 2.3);
+    _qYaw.setFromAxisAngle(AXIS_Y, state.yaw);
+    _qPitch.setFromAxisAngle(AXIS_X, state.pitch);
+    state.camera.quaternion.copy(_qYaw).multiply(_qPitch);
+  }
+
+  /* ===== POINTER LOCK ===== */
+  function isPointerLocked() {
+    return state.renderer && document.pointerLockElement === state.renderer.domElement;
+  }
+  function requestLockSync() {
+    if (!state.renderer) return false;
+    var c = state.renderer.domElement;
+    if (document.pointerLockElement === c) return true;
+    try { var p = c.requestPointerLock(); if (p && p.catch) p.catch(function(){}); return true; }
+    catch (e) { return false; }
+  }
+  function releasePointerLock() {
+    try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {}
+  }
+
+  /* ===== HEADER ===== */
+  function renderHeaderActions() {
+    headerActions.innerHTML = '';
+    if (state.screen === 'setup') {
+      headerActions.innerHTML = '<button class="v-icon-btn" id="fullscreen-btn" title="Fullscreen (F11)">' + icon('maximize', 16) + '</button>';
+      var btn = document.getElementById('fullscreen-btn');
+      if (btn) btn.addEventListener('click', toggleFullscreen);
+    }
+  }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      var el = document.documentElement;
+      var req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      if (req) { try { req.call(el); } catch (e) {} }
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+      if (exit) { try { exit.call(document); } catch (e) {} }
+    }
+  }
+  function render() {
+    if (state.screen === 'setup') renderSetup();
+    else if (state.screen === 'results') renderResults();
+    renderHeaderActions();
+  }
+
+  /* ===== SETUP ===== */
+  function renderSetup() {
+    body.classList.remove('no-scroll');
+    var g = GAMES[state.game];
+    var baseEdpi = state.baseSens * state.dpi;
+    body.innerHTML =
+      '<div class="v-container">' +
+
+        '<div class="v-hero">' +
+          '<div class="v-title">AI Sensitivity Optimizer</div>' +
+          '<div class="v-sub">Optimizer 1D berbasis <strong>Gaussian Kernel Regression + UCB</strong> pada sumbu <em>eDPI</em>. Setiap trial menyempitkan estimasi f(eDPI) → rekomendasi sens yang <strong>tidak drift</strong> ke DPI acak.</div>' +
+        '</div>' +
+
+        /* ROW 1: primary config */
+        '<div class="v-grid-2" style="align-items: start;">' +
+
+          '<div class="v-panel">' +
+            '<div class="v-panel-header">' + icon('settings', 16) + '<div class="v-panel-title">Setup</div>' +
+              '<div class="v-panel-sub">' + g.label + ' · ' + g.rank + '</div></div>' +
+
+            '<div class="v-field">' +
+              '<label class="v-label">' + icon('target', 12) + 'Game</label>' +
+              '<div class="v-opt-group" id="game-group">' +
+                Object.keys(GAMES).map(function(k){
+                  var gg = GAMES[k];
+                  return '<div class="v-opt ' + (state.game === k ? 'selected' : '') + '" data-key="' + k + '">' +
+                    '<div class="v-opt-title">' + gg.label + '</div>' +
+                    '<div class="v-opt-desc">Yaw ' + gg.yawLabel + '</div></div>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+
+            '<div class="v-grid-2">' +
+              '<div class="v-field"><label class="v-label">' + icon('mouse', 12) + 'Hardware DPI</label>' +
+                '<input class="v-input" id="sf-dpi" type="number" value="' + state.dpi + '" min="100" max="26000" /></div>' +
+              '<div class="v-field"><label class="v-label">' + icon('crosshair', 12) + 'In-Game Sens</label>' +
+                '<input class="v-input" id="sf-sens" type="number" step="0.001" value="' + state.baseSens + '" /></div>' +
+            '</div>' +
+
+            '<div class="v-info">' + icon('info', 14) +
+              '<div>eDPI kamu saat ini: <strong>' + Math.round(baseEdpi) + '</strong>' +
+              ' (sens ' + state.baseSens + ' × DPI ' + state.dpi + ')</div>' +
+            '</div>' +
+
+            '<div class="v-field">' +
+              '<label class="v-label">' + icon('zap', 12) + 'Task Mix</label>' +
+              '<div class="v-opt-group" id="task-group">' +
+                Object.keys(TASK_MODES).map(function(k){
+                  var m = TASK_MODES[k];
+                  return '<div class="v-opt ' + (state.taskMix === k ? 'selected' : '') + '" data-key="' + k + '" style="min-width:0;flex:1 1 calc(50% - 3px);">' +
+                    '<div class="v-opt-title">' + m.label + '</div>' +
+                    '<div class="v-opt-desc">' + m.desc + '</div></div>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+
+            '<div class="v-field">' +
+              '<label class="v-label">' + icon('ruler', 12) + 'Target Distance</label>' +
+              '<div class="v-opt-group" id="dist-group">' +
+                Object.keys(DISTANCE_MODES).map(function(k){
+                  var m = DISTANCE_MODES[k];
+                  return '<div class="v-opt ' + (state.distanceMode === k ? 'selected' : '') + '" data-key="' + k + '" style="min-width:0;flex:1 1 calc(50% - 3px);">' +
+                    '<div class="v-opt-title">' + m.label + '</div>' +
+                    '<div class="v-opt-desc">' + m.desc + '</div></div>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+
+            '<div class="v-field">' +
+              '<label class="v-label">' + icon('eye', 12) + 'Horizontal FOV</label>' +
+              '<div class="v-slider-row">' +
+                '<input type="range" class="v-slider" id="fov-slider" min="60" max="120" step="1" value="' + state.hFov + '" />' +
+                '<span class="v-slider-val" id="fov-val">' + state.hFov + '°</span>' +
+              '</div>' +
+              '<div class="v-btn-row" id="fov-presets" style="margin-top:6px;">' +
+                Object.keys(FOV_PRESETS).map(function(k){
+                  var p = FOV_PRESETS[k];
+                  return '<button class="v-btn ghost sm" data-fov="' + p.hFov + '">' + p.label + '</button>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+
+            '<div class="v-toggles">' +
+              '<div class="v-toggle ' + (state.soundEnabled ? 'active' : '') + '" id="sound-toggle">' +
+                '<span class="v-toggle-dot"></span>Sound</div>' +
+              '<div class="v-toggle ' + (state.warmupEnabled ? 'active' : '') + '" id="warmup-toggle">' +
+                '<span class="v-toggle-dot"></span>Warm-up</div>' +
+              '<div class="v-toggle ' + (state.graphEnabled ? 'active' : '') + '" id="graph-toggle">' +
+                '<span class="v-toggle-dot"></span>Graph</div>' +
+            '</div>' +
+
+            '<div class="v-info" style="margin-top:8px;">' + icon('info', 14) +
+              '<div>Pastikan Windows pointer speed 6/11 dan <em>Enhance pointer precision</em> OFF. FOV default 103° (Valorant).</div>' +
+            '</div>' +
+          '</div>' +
+
+          /* Crosshair card */
+          '<div class="v-panel neutral">' +
+            '<div class="v-panel-header">' + icon('crosshair', 16) + '<div class="v-panel-title">Crosshair</div>' +
+              '<div class="v-panel-sub">auto-saved</div></div>' +
+            '<div class="v-tabs" id="ch-tabs">' +
+              '<button class="v-tab ' + (state.crosshairTab === 'valorant' ? 'active' : '') + '" data-tab="valorant">Valorant</button>' +
+              '<button class="v-tab ' + (state.crosshairTab === 'cs2' ? 'active' : '') + '" data-tab="cs2">CS2</button>' +
+              '<button class="v-tab ' + (state.crosshairTab === 'custom' ? 'active' : '') + '" data-tab="custom">Custom</button>' +
+            '</div>' +
+            '<div class="v-crosshair-grid">' +
+              '<div class="v-crosshair-preview" id="ch-preview">' + renderCrosshairSVG(state.crosshair, 130) + '</div>' +
+              '<div style="display:flex;flex-direction:column;gap:10px;">' +
+                '<div class="v-field" id="ch-input-valorant" style="' + (state.crosshairTab !== 'valorant' ? 'display:none;' : '') + '">' +
+                  '<label class="v-label">Paste Valorant Code</label>' +
+                  '<textarea class="v-textarea" id="ch-valorant-code" placeholder="0;P;c;5;o;1;f;0;0t;1;0l;1;0o;2;0a;1;0f;0;1b;0"></textarea>' +
+                  '<div class="v-btn-row"><button class="v-btn secondary sm" id="ch-valorant-apply" style="flex:1;">' + icon('check', 13) + 'Terapkan</button></div>' +
+                '</div>' +
+                '<div class="v-field" id="ch-input-cs2" style="' + (state.crosshairTab !== 'cs2' ? 'display:none;' : '') + '">' +
+                  '<label class="v-label">Paste CS2 Commands</label>' +
+                  '<textarea class="v-textarea" id="ch-cs2-code" placeholder="cl_crosshairsize 2; cl_crosshairgap -2; cl_crosshairthickness 1;"></textarea>' +
+                  '<div class="v-btn-row"><button class="v-btn secondary sm" id="ch-cs2-apply" style="flex:1;">' + icon('check', 13) + 'Terapkan</button></div>' +
+                '</div>' +
+                '<div class="v-field" id="ch-input-custom" style="' + (state.crosshairTab !== 'custom' ? 'display:none;' : '') + '">' +
+                  '<label class="v-label">Custom</label>' +
+                  '<div style="display:flex;flex-direction:column;gap:7px;padding:9px;background:var(--v-bg-2);border:1px solid rgba(255,255,255,0.06);">' +
+                    '<div style="display:flex;align-items:center;gap:8px;">' +
+                      '<span class="v-slider-label">Color</span>' +
+                      '<div class="v-color-row" id="ch-colors">' +
+                        ['#ffffff','#00ff00','#ffff00','#00ffff','#ff00ff','#ff0000','#45d6c4','#e8a33d'].map(function(c){
+                          return '<div class="v-color ' + (state.crosshair.color === c ? 'active' : '') + '" data-color="' + c + '" style="background:' + c + ';"></div>';
+                        }).join('') +
+                      '</div>' +
+                    '</div>' +
+                    '<div class="v-slider-row"><span class="v-slider-label">Inner Len</span><input type="range" class="v-slider" data-prop="innerLength" min="0" max="20" step="1" value="' + state.crosshair.innerLength + '" /><span class="v-slider-val" data-val="innerLength">' + state.crosshair.innerLength + '</span></div>' +
+                    '<div class="v-slider-row"><span class="v-slider-label">Inner Thick</span><input type="range" class="v-slider" data-prop="innerThickness" min="1" max="6" step="0.5" value="' + state.crosshair.innerThickness + '" /><span class="v-slider-val" data-val="innerThickness">' + state.crosshair.innerThickness + '</span></div>' +
+                    '<div class="v-slider-row"><span class="v-slider-label">Inner Off</span><input type="range" class="v-slider" data-prop="innerOffset" min="0" max="20" step="1" value="' + state.crosshair.innerOffset + '" /><span class="v-slider-val" data-val="innerOffset">' + state.crosshair.innerOffset + '</span></div>' +
+                    '<div class="v-slider-row"><span class="v-slider-label">Outer Len</span><input type="range" class="v-slider" data-prop="outerLength" min="0" max="20" step="1" value="' + state.crosshair.outerLength + '" /><span class="v-slider-val" data-val="outerLength">' + state.crosshair.outerLength + '</span></div>' +
+                    '<div class="v-slider-row"><span class="v-slider-label">Outer Thick</span><input type="range" class="v-slider" data-prop="outerThickness" min="0" max="6" step="0.5" value="' + state.crosshair.outerThickness + '" /><span class="v-slider-val" data-val="outerThickness">' + state.crosshair.outerThickness + '</span></div>' +
+                    '<div class="v-toggles" style="margin-top:3px;">' +
+                      '<div class="v-toggle ' + (state.crosshair.dot ? 'active' : '') + '" data-toggle="dot"><span class="v-toggle-dot"></span>Dot</div>' +
+                      '<div class="v-toggle ' + (state.crosshair.outline ? 'active' : '') + '" data-toggle="outline"><span class="v-toggle-dot"></span>Outline</div>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="v-btn-row">' +
+                  '<button class="v-btn ghost sm" id="ch-copy-cs2">' + icon('copy', 13) + 'Copy as CS2</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+        '</div>' +
+
+        /* ROW 2: vault + advanced */
+        '<div class="v-grid-2" style="align-items: start;">' +
+
+          /* SENS VAULT */
+          '<div class="v-panel hollow">' +
+            '<div class="v-panel-header">' + icon('save', 16) + '<div class="v-panel-title">Sens Vault</div>' +
+              '<div class="v-panel-sub">' + vault.length + ' saved</div></div>' +
+            '<div class="v-btn-row">' +
+              '<button class="v-btn secondary sm" id="vault-save">' + icon('save', 13) + 'Simpan Sens Saat Ini</button>' +
+            '</div>' +
+            '<div id="vault-list-container">' + renderVaultList() + '</div>' +
+          '</div>' +
+
+          /* ADVANCED */
+          '<div class="v-panel hollow">' +
+            '<div class="v-panel-header">' + icon('settings', 16) + '<div class="v-panel-title">Advanced</div></div>' +
+            '<div class="v-field">' +
+              '<label class="v-label">' + icon('ruler', 12) + 'Calibrate Hardware DPI</label>' +
+              '<div class="v-sub" style="font-size:11.5px;">Ukur DPI aktual mouse pakai penggaris.</div>' +
+              '<div class="v-btn-row" style="margin-top:6px;">' +
+                '<button class="v-btn ghost sm" id="dpi-cal-open">' + icon('ruler', 13) + 'Open Calibrator</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="v-field">' +
+              '<label class="v-label">' + icon('download', 12) + 'Import / Export / Reset</label>' +
+              '<div class="v-sub" style="font-size:11.5px;">Backup semua data ke JSON, atau reset total.</div>' +
+              '<div class="v-btn-row" style="margin-top:6px;">' +
+                '<button class="v-btn ghost sm" id="btn-export">' + icon('download', 13) + 'Export</button>' +
+                '<button class="v-btn ghost sm" id="btn-import">' + icon('upload', 13) + 'Import</button>' +
+                '<button class="v-btn ghost sm" id="btn-clear-all">' + icon('trash', 13) + 'Reset</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+        '</div>' +
+
+        /* HISTORY */
+        (sessionHistory.length >= 2 ? renderHistoryCard() : '') +
+
+        /* START BAR */
+        '<div class="v-panel neutral" style="margin-top:8px;">' +
+          '<div class="v-panel-header">' + icon('zap', 16) + '<div class="v-panel-title">Ready</div>' +
+            '<div class="v-panel-sub">' + TOTAL_TRIALS + ' trials · ' + TASK_MODES[state.taskMix].label + ' · ' + DISTANCE_MODES[state.distanceMode].label + '</div></div>' +
+          '<div class="v-sub" style="font-size:12.5px;">' +
+            '• <strong>' + TOTAL_TRIALS + '</strong> trial × ' + (TEST_DURATION/1000) + 's' + (state.warmupEnabled ? ' + warm-up' : '') + '<br>' +
+            '• Eksplorasi 1D pada sumbu <strong>eDPI</strong> → tanpa drift antar-DPI<br>' +
+            '• Estimasi: ~' + Math.max(1, Math.round((TOTAL_TRIALS * (TEST_DURATION/1000 + 15) + (state.warmupEnabled ? 16 : 0)) / 60)) + ' menit' +
+          '</div>' +
+          '<div class="v-shortcuts">' +
+            '<div class="v-shortcut"><span class="v-kbd">SPACE</span>Mulai / lanjut</div>' +
+            '<div class="v-shortcut"><span class="v-kbd">ESC</span>Pause</div>' +
+            '<div class="v-shortcut"><span class="v-kbd">M</span>Mute</div>' +
+            '<div class="v-shortcut"><span class="v-kbd">G</span>Graph</div>' +
+          '</div>' +
+          '<div class="v-error" id="sf-error" role="alert"></div>' +
+          '<div class="v-btn-row" style="justify-content:center; margin-top:6px;">' +
+            '<button class="v-btn lg" id="sf-start-btn">' + icon('play', 18) + 'Queue Optimization</button>' +
+          '</div>' +
+        '</div>' +
+
+      '</div>';
+
+    bindSetupEvents();
+  }
+
+  function renderVaultList() {
+    if (!vault.length) return '<div class="v-vault-empty">Belum ada preset tersimpan.</div>';
+    return '<div class="v-vault-list">' + vault.map(function(v, idx){
+      return '<div class="v-vault-item">' +
+        '<div class="v-vault-item-info">' +
+          '<div class="v-vault-item-title">' + (v.label || ('Preset ' + (idx+1))) + '</div>' +
+          '<div class="v-vault-item-meta">' + v.game + ' · ' + v.sens.toFixed(4) + ' @ ' + Math.round(v.dpi) + ' DPI · eDPI ' + Math.round(v.sens * v.dpi) + '</div>' +
+        '</div>' +
+        '<button class="v-btn ghost sm" data-vault-load="' + idx + '">Load</button>' +
+        '<button class="v-btn ghost sm" data-vault-del="' + idx + '" style="padding:8px 10px;">' + icon('x', 12) + '</button>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  function renderHistoryCard() {
+    var recent = sessionHistory.slice(-10);
+    var maxE = 1, minE = Infinity;
+    recent.forEach(function(h) { if (h.edpi > maxE) maxE = h.edpi; if (h.edpi < minE) minE = h.edpi; });
+    if (minE === Infinity) minE = 0;
+    var range = Math.max(1, maxE - minE);
+    var W = 800, H = 120, PAD = 34;
+    var stepX = recent.length > 1 ? (W - PAD*2) / (recent.length - 1) : 0;
+    var pts = recent.map(function(h, i) {
+      var x = PAD + i * stepX;
+      var y = H - PAD - ((h.edpi - minE) / range) * (H - PAD*2);
+      return x + ',' + y;
+    });
+    var pathStr = 'M' + pts.join(' L');
+    var dots = recent.map(function(h, i) {
+      var x = PAD + i * stepX;
+      var y = H - PAD - ((h.edpi - minE) / range) * (H - PAD*2);
+      return '<circle cx="' + x + '" cy="' + y + '" r="4" fill="#00ffba" stroke="#0f1923" stroke-width="2"/>';
+    }).join('');
+    return '<div class="v-panel hollow">' +
+      '<div class="v-panel-header">' + icon('chart', 16) + '<div class="v-panel-title">Session History</div>' +
+        '<div class="v-panel-sub">' + sessionHistory.length + ' sessions</div></div>' +
+      '<div class="v-sub" style="font-size:11.5px;">eDPI optimal per sesi. Range ' + Math.round(minE) + ' – ' + Math.round(maxE) + '.</div>' +
+      '<div class="v-history">' +
+        '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+          '<path d="' + pathStr + '" fill="none" stroke="#ff4655" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+          dots +
+        '</svg>' +
+      '</div>' +
+      '<div class="v-btn-row" style="justify-content:flex-end;">' +
+        '<button class="v-btn ghost sm" id="btn-clear-history">' + icon('trash', 13) + 'Clear History</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function bindSetupEvents() {
+    Array.prototype.forEach.call(document.querySelectorAll('#game-group .v-opt'), function(el){
+      el.addEventListener('click', function(){
+        if (el.dataset.key === state.game) return;
+        switchGame(el.dataset.key);
+        renderSetup();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#task-group .v-opt'), function(el){
+      el.addEventListener('click', function(){
+        state.taskMix = el.dataset.key;
+        Array.prototype.forEach.call(document.querySelectorAll('#task-group .v-opt'), function(r){ r.classList.remove('selected'); });
+        el.classList.add('selected');
+        saveCurrentToProfile();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#dist-group .v-opt'), function(el){
+      el.addEventListener('click', function(){
+        state.distanceMode = el.dataset.key;
+        Array.prototype.forEach.call(document.querySelectorAll('#dist-group .v-opt'), function(r){ r.classList.remove('selected'); });
+        el.classList.add('selected');
+        saveCurrentToProfile();
+      });
+    });
+
+    var soundToggle = document.getElementById('sound-toggle');
+    if (soundToggle) soundToggle.addEventListener('click', function(){
+      state.soundEnabled = !state.soundEnabled;
+      soundToggle.classList.toggle('active', state.soundEnabled);
+      AudioSys.setEnabled(state.soundEnabled);
+      if (state.soundEnabled) { AudioSys.unlock(); AudioSys.tick(); }
+      saveCurrentToProfile();
+    });
+    var warmToggle = document.getElementById('warmup-toggle');
+    if (warmToggle) warmToggle.addEventListener('click', function(){
+      state.warmupEnabled = !state.warmupEnabled;
+      warmToggle.classList.toggle('active', state.warmupEnabled);
+      saveCurrentToProfile();
+    });
+    var graphToggle = document.getElementById('graph-toggle');
+    if (graphToggle) graphToggle.addEventListener('click', function(){
+      state.graphEnabled = !state.graphEnabled;
+      graphToggle.classList.toggle('active', state.graphEnabled);
+      saveCurrentToProfile();
+    });
+
+    var fovSlider = document.getElementById('fov-slider');
+    var fovVal = document.getElementById('fov-val');
+    if (fovSlider) fovSlider.addEventListener('input', function(){
+      state.hFov = parseFloat(fovSlider.value);
+      if (fovVal) fovVal.textContent = state.hFov + '°';
+      saveCurrentToProfile();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#fov-presets [data-fov]'), function(btn){
+      btn.addEventListener('click', function(){
+        state.hFov = parseInt(btn.dataset.fov, 10);
+        if (fovSlider) fovSlider.value = state.hFov;
+        if (fovVal) fovVal.textContent = state.hFov + '°';
+        saveCurrentToProfile();
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('#ch-tabs .v-tab'), function(tab){
+      tab.addEventListener('click', function(){
+        state.crosshairTab = tab.dataset.tab;
+        Array.prototype.forEach.call(document.querySelectorAll('#ch-tabs .v-tab'), function(t){
+          t.classList.toggle('active', t.dataset.tab === state.crosshairTab);
+        });
+        document.getElementById('ch-input-valorant').style.display = state.crosshairTab === 'valorant' ? '' : 'none';
+        document.getElementById('ch-input-cs2').style.display      = state.crosshairTab === 'cs2' ? '' : 'none';
+        document.getElementById('ch-input-custom').style.display   = state.crosshairTab === 'custom' ? '' : 'none';
+      });
+    });
+    var vBtn = document.getElementById('ch-valorant-apply');
+    if (vBtn) vBtn.addEventListener('click', function(){
+      var parsed = parseValorantCode(document.getElementById('ch-valorant-code').value);
+      if (parsed) { state.crosshair = parsed; saveCurrentToProfile(); updateCrosshairPreview(); }
+    });
+    var cBtn = document.getElementById('ch-cs2-apply');
+    if (cBtn) cBtn.addEventListener('click', function(){
+      var parsed = parseCS2Code(document.getElementById('ch-cs2-code').value);
+      if (parsed) { state.crosshair = parsed; saveCurrentToProfile(); updateCrosshairPreview(); }
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#ch-colors .v-color'), function(sw){
+      sw.addEventListener('click', function(){
+        state.crosshair.color = sw.dataset.color;
+        Array.prototype.forEach.call(document.querySelectorAll('#ch-colors .v-color'), function(s){
+          s.classList.toggle('active', s.dataset.color === state.crosshair.color);
+        });
+        saveCurrentToProfile(); updateCrosshairPreview();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#ch-input-custom .v-slider'), function(sl){
+      sl.addEventListener('input', function(){
+        var prop = sl.dataset.prop;
+        state.crosshair[prop] = parseFloat(sl.value);
+        var valEl = document.querySelector('[data-val="' + prop + '"]');
+        if (valEl) valEl.textContent = sl.value;
+        saveCurrentToProfile(); updateCrosshairPreview();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#ch-input-custom .v-toggle'), function(tg){
+      tg.addEventListener('click', function(){
+        var prop = tg.dataset.toggle;
+        state.crosshair[prop] = !state.crosshair[prop];
+        tg.classList.toggle('active', state.crosshair[prop]);
+        saveCurrentToProfile(); updateCrosshairPreview();
+      });
+    });
+    var copyCs2 = document.getElementById('ch-copy-cs2');
+    if (copyCs2) copyCs2.addEventListener('click', function(){
+      var txt = generateCS2Commands(state.crosshair);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function(){
+          var orig = copyCs2.innerHTML;
+          copyCs2.innerHTML = icon('check', 13) + 'Copied';
+          setTimeout(function(){ copyCs2.innerHTML = orig; }, 1400);
+        }).catch(function(){});
+      }
+    });
+
+    /* Vault */
+    var vaultSave = document.getElementById('vault-save');
+    if (vaultSave) vaultSave.addEventListener('click', function(){
+      var label = prompt('Label untuk preset ini:', 'Preset ' + (vault.length + 1));
+      if (!label) return;
+      vault.push({
+        label: label.slice(0, 30),
+        game: state.game,
+        sens: state.baseSens,
+        dpi: state.dpi,
+        crosshair: Object.assign({}, state.crosshair),
+        hFov: state.hFov,
+        ts: Date.now()
+      });
+      saveVault();
+      var cont = document.getElementById('vault-list-container');
+      if (cont) cont.innerHTML = renderVaultList();
+      bindVaultEvents();
+    });
+    bindVaultEvents();
+
+    function bindVaultEvents() {
+      Array.prototype.forEach.call(document.querySelectorAll('[data-vault-load]'), function(btn){
+        btn.addEventListener('click', function(){
+          var idx = parseInt(btn.dataset.vaultLoad, 10);
+          var v = vault[idx]; if (!v) return;
+          state.game = v.game;
+          profiles.activeGame = v.game;
+          state.baseSens = v.sens;
+          state.dpi = v.dpi;
+          state.crosshair = Object.assign(defaultCrosshair(), v.crosshair || {});
+          state.hFov = v.hFov || 103;
+          saveCurrentToProfile();
+          renderSetup();
+        });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-vault-del]'), function(btn){
+        btn.addEventListener('click', function(){
+          var idx = parseInt(btn.dataset.vaultDel, 10);
+          if (confirm('Hapus preset ini?')) {
+            vault.splice(idx, 1);
+            saveVault();
+            var cont = document.getElementById('vault-list-container');
+            if (cont) cont.innerHTML = renderVaultList();
+            bindVaultEvents();
+          }
+        });
+      });
+    }
+
+    var dpiCalOpen = document.getElementById('dpi-cal-open');
+    if (dpiCalOpen) dpiCalOpen.addEventListener('click', openDPICalibrator);
+    var btnExport = document.getElementById('btn-export');
+    if (btnExport) btnExport.addEventListener('click', exportAllJSON);
+    var btnImport = document.getElementById('btn-import');
+    if (btnImport) btnImport.addEventListener('click', importAllJSON);
+    var btnClearAll = document.getElementById('btn-clear-all');
+    if (btnClearAll) btnClearAll.addEventListener('click', function(){
+      if (confirm('Hapus SEMUA settings, history, dan profiles?')) {
+        ['profiles', 'history', 'vault', 'settings', 'crosshair'].forEach(STORAGE.remove);
+        location.reload();
+      }
+    });
+    var btnClearHist = document.getElementById('btn-clear-history');
+    if (btnClearHist) btnClearHist.addEventListener('click', function(){
+      sessionHistory = [];
+      STORAGE.save('history', []);
+      renderSetup();
+    });
+
+    var startBtn = document.getElementById('sf-start-btn');
+    if (startBtn) startBtn.addEventListener('click', function(){
+      var dpiVal  = parseFloat(document.getElementById('sf-dpi').value);
+      var sensVal = parseFloat(document.getElementById('sf-sens').value);
+      var err = document.getElementById('sf-error');
+      if (!dpiVal || dpiVal <= 0 || dpiVal > 100000) { err.textContent = 'DPI tidak valid.'; return; }
+      if (!sensVal || sensVal <= 0 || sensVal > 100)  { err.textContent = 'Sens tidak valid.'; return; }
+      err.textContent = '';
+      state.dpi = dpiVal;
+      state.baseSens = sensVal;
+      state.baseDpi = dpiVal;
+      state.baseEdpi = sensVal * dpiVal;
+      AudioSys.unlock();
+      saveCurrentToProfile();
+
+      /* eDPI range: 0.4x .. 2.5x of user's base eDPI */
+      state.edpiMin = Math.max(50, state.baseEdpi * 0.4);
+      state.edpiMax = Math.min(5000, state.baseEdpi * 2.5);
+
+      state.trials = []; state.observations = []; state.optimum = null;
+      state.missData = [];
+      state.consecutiveBad = 0;
+      state.streak = 0;
+      startOptimizer();
+    });
+  }
+
+  function updateCrosshairPreview() {
+    var preview = document.getElementById('ch-preview');
+    if (preview) preview.innerHTML = renderCrosshairSVG(state.crosshair, 130);
+    var chContainer = document.getElementById('crosshair-container');
+    if (chContainer) chContainer.innerHTML = renderCrosshairSVG(state.crosshair, 32);
+    var pausePrev = document.getElementById('pause-ch-preview');
+    if (pausePrev) pausePrev.innerHTML = renderCrosshairSVG(state.crosshair, 130);
+  }
+
+  /* ===== IMPORT / EXPORT / DPI CAL ===== */
+  function exportAllJSON() {
+    var data = { version: 3, ts: Date.now(), profiles: profiles, history: sessionHistory, vault: vault };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'sens-finder-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  function importAllJSON() {
+    var inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'application/json,.json';
+    inp.onchange = function() {
+      var f = inp.files && inp.files[0]; if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var data = JSON.parse(e.target.result);
+          if (data && data.profiles && data.profiles.games) {
+            profiles = data.profiles;
+            saveProfiles();
+            sessionHistory = Array.isArray(data.history) ? data.history : [];
+            STORAGE.save('history', sessionHistory);
+            vault = Array.isArray(data.vault) ? data.vault : [];
+            saveVault();
+            applyProfileToState();
+            renderSetup();
+          } else alert('Format tidak dikenal.');
+        } catch (err) { alert('Gagal: ' + err.message); }
+      };
+      reader.readAsText(f);
+    };
+    inp.click();
+  }
+  function openDPICalibrator() {
+    var bg = document.createElement('div');
+    bg.className = 'v-modal-bg';
+    bg.innerHTML =
+      '<div class="v-modal">' +
+        '<div class="v-modal-title">' + icon('ruler', 18) + ' DPI Calibrator</div>' +
+        '<div class="v-sub" style="font-size:12.5px;">Gerakkan mouse lurus sejauh jarak yang ditentukan, klik Start sebelum mulai dan Stop saat selesai.</div>' +
+        '<div class="v-field"><label class="v-label">Distance (cm)</label><input class="v-input" id="dpi-dist" type="number" min="2" max="50" step="0.5" value="10" /></div>' +
+        '<div class="v-field"><label class="v-label">Counts</label><input class="v-input" id="dpi-counts" type="text" value="0" readonly /></div>' +
+        '<div class="v-field"><label class="v-label">Calculated DPI</label><input class="v-input" id="dpi-result" type="text" value="—" readonly /></div>' +
+        '<div class="v-modal-actions">' +
+          '<button class="v-btn secondary" id="dpi-cancel">Cancel</button>' +
+          '<button class="v-btn" id="dpi-start">Start</button>' +
+          '<button class="v-btn teal" id="dpi-apply" disabled>Apply</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(bg);
+    var countsEl = bg.querySelector('#dpi-counts');
+    var resultEl = bg.querySelector('#dpi-result');
+    var distEl   = bg.querySelector('#dpi-dist');
+    var startBtn = bg.querySelector('#dpi-start');
+    var applyBtn = bg.querySelector('#dpi-apply');
+    var active = false, counts = 0;
+    function onMove(e) { if (!active) return; counts += Math.abs(e.movementX); countsEl.value = counts; }
+    document.addEventListener('mousemove', onMove);
+    function close() { active = false; document.removeEventListener('mousemove', onMove); document.body.removeChild(bg); }
+    startBtn.addEventListener('click', function() {
+      if (!active) { active = true; counts = 0; countsEl.value = '0'; resultEl.value = '—'; applyBtn.disabled = true; startBtn.textContent = 'Stop'; }
+      else {
+        active = false; startBtn.textContent = 'Start';
+        var distCm = parseFloat(distEl.value) || 10;
+        if (counts > 0 && distCm > 0) {
+          var dpi = Math.round(counts / (distCm / 2.54));
+          resultEl.value = dpi + ' DPI';
+          applyBtn.disabled = false;
+          applyBtn.onclick = function() { state.dpi = dpi; document.getElementById('sf-dpi').value = dpi; saveCurrentToProfile(); close(); };
+        }
+      }
+    });
+    bg.querySelector('#dpi-cancel').addEventListener('click', close);
+  }
+
+  /* ===== TEST SCREEN ===== */
+  function setupTestUI() {
+    body.classList.add('no-scroll');
+    body.innerHTML =
+      '<div id="scene-wrap">' +
+        '<div id="crosshair-container"></div>' +
+        '<div class="v-hud">' +
+          '<div class="v-hud-item"><div class="v-hud-label">Trial</div><div class="v-hud-value"><span id="hud-round">1</span><span style="color:var(--v-muted);font-size:12px;"> / ' + TOTAL_TRIALS + '</span></div></div>' +
+          '<div class="v-hud-item v-hud-center"><div class="v-hud-label">eDPI</div><div class="v-hud-value red" id="hud-sens">0</div></div>' +
+          '<div class="v-hud-item v-hud-right"><div class="v-hud-label" id="hud-task-label">Task</div><div class="v-hud-value"><span id="hud-hits">0</span><span style="color:var(--v-muted);font-size:12px;"> · <span id="hud-time">12</span>s</span></div></div>' +
+        '</div>' +
+        '<div class="v-timer-bar" id="timer-bar" style="width:0%;"></div>' +
+        '<div class="v-timer-big" id="timer-big">12</div>' +
+        '<div class="v-countdown-big" id="countdown-big"></div>' +
+        '<div class="v-streak" id="streak-badge"></div>' +
+        '<button class="v-hud-mute" id="hud-mute"></button>' +
+        '<canvas id="realtime-graph"' + (state.graphEnabled ? ' class="on"' : '') + '></canvas>' +
+        '<div id="test-overlay"></div>' +
+      '</div>';
+    updateCrosshairPreview();
+    updateMuteButton();
+    var muteBtn = document.getElementById('hud-mute');
+    if (muteBtn) muteBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); toggleSound(); });
+    if (state.graphEnabled) initRealtimeGraph();
+  }
+  function updateMuteButton() {
+    var btn = document.getElementById('hud-mute'); if (!btn) return;
+    btn.innerHTML = icon(state.soundEnabled ? 'volumeOn' : 'volumeOff', 16);
+    btn.classList.toggle('muted', !state.soundEnabled);
+  }
+  function toggleSound() {
+    state.soundEnabled = !state.soundEnabled;
+    AudioSys.setEnabled(state.soundEnabled);
+    if (state.soundEnabled) { AudioSys.unlock(); AudioSys.tick(); }
+    updateMuteButton();
+    saveCurrentToProfile();
+  }
+  function initRealtimeGraph() {
+    var c = document.getElementById('realtime-graph'); if (!c) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = c.clientWidth || 220, h = c.clientHeight || 70;
+    c.width = Math.floor(w * dpr); c.height = Math.floor(h * dpr);
+    state.graphCanvas = c;
+    state.graphCtx = c.getContext('2d');
+    if (state.graphCtx) state.graphCtx.scale(dpr, dpr);
+    state.graphIdx = 0;
+    for (var i = 0; i < state.graphOmega.length; i++) { state.graphOmega[i] = 0; state.graphDist[i] = 0; }
+  }
+  function drawRealtimeGraph() {
+    var c = state.graphCanvas, ctx = state.graphCtx; if (!c || !ctx) return;
+    var w = c.clientWidth, h = c.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+    var N = state.graphOmega.length, maxOmega = 1, maxD = 1;
+    for (var i = 0; i < N; i++) { if (state.graphOmega[i] > maxOmega) maxOmega = state.graphOmega[i]; if (state.graphDist[i] > maxD) maxD = state.graphDist[i]; }
+    ctx.strokeStyle = '#00ffba'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (var i = 0; i < N; i++) {
+      var x = (i / (N - 1)) * w;
+      var y = (h/2) - (state.graphOmega[i] / maxOmega) * (h/2 - 2);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = '#ff4655'; ctx.beginPath();
+    for (var i = 0; i < N; i++) {
+      var x = (i / (N - 1)) * w;
+      var y = h - (state.graphDist[i] / maxD) * (h/2 - 2);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '9px monospace';
+    ctx.fillText('ω', 4, 12); ctx.fillText('dist', 4, h - 4);
+  }
+
+  async function startOptimizer() {
+    state.screen = 'test';
+    setupTestUI();
+    initScene();
+    var wrap = document.getElementById('scene-wrap');
+    wrap.insertBefore(state.renderer.domElement, wrap.firstChild);
+    resizeScene();
+    await runOptimizer();
+  }
+
+  /* ===== MAIN LOOP ===== */
+  function taskSequence() {
+    if (state.taskMix !== 'mixed') return state.taskMix;
+    var seq = ['flick', 'micro', 'tracking'];
+    return seq[Math.floor(Math.random() * seq.length)];
+  }
+  function showStreak(n) {
+    var el = document.getElementById('streak-badge'); if (!el) return;
+    if (n < 3) { el.classList.remove('on'); return; }
+    el.textContent = n + ' STREAK';
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    AudioSys.streak(n);
+  }
+
+  async function runOptimizer() {
+    if (state.warmupEnabled) {
+      var wp = { sens: state.baseSens, edpi: state.baseSens * state.dpi, warmup: true, taskType: 'flick' };
+      await showTrialIntro(0, wp);
+      await sleep(80);
+      if (!isPointerLocked()) {
+        var wa = await showPauseMenu('Pointer lock gagal.');
+        if (wa === 'exit' || wa === 'restart_session') { returnToSetup(); return; }
+      } else {
+        await showActiveCountdown();
+        await runSingleTest(wp, 0);
+        releasePointerLock();
+      }
+    }
+
+    for (var i = 0; i < TOTAL_TRIALS; i++) {
+      var pt = await pickPoint(i);
+      pt.taskType = taskSequence();
+      var outerContinue = false;
+      while (!outerContinue) {
+        await showTrialIntro(i + 1, pt);
+        await sleep(80);
+        if (!isPointerLocked()) {
+          var action = await showPauseMenu('Pointer lock gagal aktif.');
+          if (action === 'restart_trial') continue;
+          if (action === 'restart_session') { returnToSetup(); return; }
+          if (action === 'exit') { returnToSetup(); return; }
+          continue;
+        }
+        await showActiveCountdown();
+        if (!isPointerLocked()) {
+          var action2 = await showPauseMenu('Pointer lock terlepas.');
+          if (action2 === 'restart_trial') continue;
+          if (action2 === 'restart_session') { returnToSetup(); return; }
+          if (action2 === 'exit') { returnToSetup(); return; }
+          continue;
+        }
+        var result = await runSingleTest(pt, i + 1);
+        if (result === 'paused') {
+          var action3 = await showPauseMenu(state.pauseReason);
+          if (action3 === 'resume') continue;
+          if (action3 === 'restart_trial') continue;
+          if (action3 === 'restart_session') { returnToSetup(); return; }
+          if (action3 === 'exit') { returnToSetup(); return; }
+          continue;
+        }
+        registerTrial(result);
+        releasePointerLock();
+        AudioSys.complete();
+        if (result.valid && result.score < 8) state.consecutiveBad++;
+        else if (!result.valid) state.consecutiveBad++;
+        else state.consecutiveBad = 0;
+        await showTrialComplete(i + 1, result);
+        if (state.consecutiveBad >= AFK_THRESH) {
+          var afk = await showAFKDialog();
+          if (afk === 'abort') { finishPSA(); return; }
+          state.consecutiveBad = 0;
+        }
+        outerContinue = true;
+      }
+    }
+    finishPSA();
+  }
+
+  function returnToSetup() {
+    cleanupTest();
+    if (state.renderer) {
+      cancelAnimationFrame(state.animId);
+      state.renderer.domElement.remove();
+      state.renderer.dispose();
+      state.renderer = null;
+    }
+    state.trials = []; state.observations = []; state.optimum = null;
+    state.missData = [];
+    state.screen = 'setup';
+    render();
+  }
+
+  /* ===== PICK POINT — 1D on eDPI ===== */
+  async function pickPoint(i) {
+    var userDpi = state.dpi;
+    if (i === 0) {
+      return { sens: state.baseSens, dpi: userDpi, edpi: state.baseEdpi };
+    }
+    if (i <= EXPLORE_TRIALS) {
+      var e;
+      if (i % 2 === 1 || state.observations.length === 0) {
+        e = rand(state.edpiMin, state.edpiMax);
+      } else {
+        var best = state.observations.reduce(function(a, b){ return b.score > a.score ? b : a; });
+        var sd = (state.edpiMax - state.edpiMin) * 0.18;
+        e = clamp(gauss(best.edpi, sd), state.edpiMin, state.edpiMax);
+      }
+      return { sens: e / userDpi, dpi: userDpi, edpi: e };
+    }
+    var suggestedEdpi = await requestSuggest();
+    return { sens: suggestedEdpi / userDpi, dpi: userDpi, edpi: suggestedEdpi };
+  }
+
+  function registerTrial(t) {
+    state.trials.push(t);
+    if (t.valid) state.observations.push({ edpi: t.edpi, score: t.score });
+  }
+
+  /* ===== OVERLAYS ===== */
+  function showTrialIntro(round, pt) {
+    return new Promise(function(resolve){
+      var overlay = document.getElementById('test-overlay');
+      overlay.classList.remove('hidden');
+      var taskLabel = TASK_MODES[pt.taskType || state.taskMix] ? TASK_MODES[pt.taskType || state.taskMix].label : 'Flick';
+      var isWarmup = pt.warmup;
+      overlay.innerHTML =
+        '<div class="v-badge">' + icon('zap', 12) + (isWarmup ? 'Warm-Up' : 'Trial ' + round + ' / ' + TOTAL_TRIALS) + '</div>' +
+        '<div class="v-overlay-title">' + (isWarmup ? 'Pemanasan' : 'Bersiap') + '</div>' +
+        '<div class="v-overlay-stats">' +
+          '<div class="v-overlay-stat"><div class="v-overlay-stat-label">Sens</div><div class="v-overlay-stat-value red">' + pt.sens.toFixed(4) + '</div></div>' +
+          '<div class="v-overlay-stat"><div class="v-overlay-stat-label">DPI</div><div class="v-overlay-stat-value">' + Math.round(pt.dpi) + '</div></div>' +
+          '<div class="v-overlay-stat"><div class="v-overlay-stat-label">eDPI</div><div class="v-overlay-stat-value teal">' + Math.round(pt.edpi) + '</div></div>' +
+          '<div class="v-overlay-stat"><div class="v-overlay-stat-label">Task</div><div class="v-overlay-stat-value">' + taskLabel + '</div></div>' +
+        '</div>' +
+        '<div class="v-overlay-desc">' + (isWarmup ? 'Warm-up tidak dihitung. Pemanasan dulu.' : 'Arahkan crosshair ke target, klik secepat & seakurat mungkin. ESC untuk pause.') + '</div>' +
+        '<div class="v-actions" style="max-width:320px;">' +
+          '<button class="v-btn lg" id="intro-start-btn" style="justify-content:center;">' + icon('play', 16) + (isWarmup ? 'Mulai Warm-up' : 'Mulai Trial') + '</button>' +
+        '</div>' +
+        '<div class="v-overlay-hint"><span class="v-kbd">SPACE</span>juga bisa untuk mulai</div>';
+
+      var btn = document.getElementById('intro-start-btn');
+      var resolved = false;
+      function start() {
+        if (resolved) return; resolved = true;
+        AudioSys.unlock(); requestLockSync();
+        document.removeEventListener('keydown', onKey);
+        overlay.classList.add('hidden');
+        resolve();
+      }
+      function onKey(e) { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); start(); } }
+      btn.addEventListener('click', start);
+      document.addEventListener('keydown', onKey);
+    });
+  }
+
+  function showActiveCountdown() {
+    return new Promise(function(resolve){
+      var el = document.getElementById('countdown-big');
+      var i = ACTIVE_CD;
+      function step() {
+        if (i <= 0) { el.classList.remove('show'); AudioSys.go(); resolve(); return; }
+        el.textContent = i;
+        el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+        if (i === ACTIVE_CD) AudioSys.tickHigh(); else AudioSys.tick();
+        i--; setTimeout(step, 700);
+      }
+      step();
+    });
+  }
+
+  function showTrialComplete(round, t) {
+    return new Promise(function(resolve){
+      var overlay = document.getElementById('test-overlay');
+      overlay.classList.remove('hidden');
+      var grade = t.score >= 75 ? 'S' : t.score >= 65 ? 'A' : t.score >= 55 ? 'B' : t.score >= 45 ? 'C' : 'D';
+      var badge = t.valid ? '<div class="v-badge success">' + icon('check', 12) + 'Valid</div>' : '<div class="v-badge danger">' + icon('x', 12) + 'Anomali</div>';
+      overlay.innerHTML =
+        badge +
+        '<div class="v-overlay-title">Trial ' + round + ' Selesai</div>' +
+        '<div class="v-overlay-stats">' +
+          '<div class="v-overlay-stat"><div class="v-overlay-stat-label">Score</div><div class="v-overlay-stat-value red">' + t.score.toFixed(1) + '</div></div>' +
+          '<div class="v-overlay-stat"><div class="v-overlay-stat-label">Grade</div><div class="v-overlay-stat-value gold">' + grade + '</div></div>' +
+          '<div class="v-overlay-stat"><div class="v-overlay-stat-label">Acc</div><div class="v-overlay-stat-value">' + (t.accuracy * 100).toFixed(0) + '%</div></div>' +
+          '<div class="v-overlay-stat"><div class="v-overlay-stat-label">Smooth</div><div class="v-overlay-stat-value">' + t.smoothness.toFixed(2) + '</div></div>' +
+          '<div class="v-overlay-stat"><div class="v-overlay-stat-label">RT</div><div class="v-overlay-stat-value">' + t.rt.toFixed(0) + '<span style="font-size:11px;color:var(--v-muted);">ms</span></div></div>' +
+        '</div>' +
+        '<div class="v-actions" style="max-width:360px;">' +
+          '<button class="v-btn lg" id="continue-btn" style="justify-content:center;">' + icon('arrowRight', 16) + 'Continue</button>' +
+        '</div>' +
+        '<div class="v-overlay-cd">Auto-lanjut dalam <b id="auto-cd">' + TRIAL_COMPLETE_AUTO_SEC + '</b>s</div>' +
+        '<div class="v-overlay-hint"><span class="v-kbd">SPACE</span>untuk lanjut</div>';
+      var cd = TRIAL_COMPLETE_AUTO_SEC;
+      var cdEl = document.getElementById('auto-cd');
+      var timer = setInterval(function(){
+        cd--; if (cdEl) cdEl.textContent = Math.max(0, cd); if (cd <= 0) finish();
+      }, 1000);
+      var resolved = false;
+      function finish() {
+        if (resolved) return; resolved = true;
+        clearInterval(timer); document.removeEventListener('keydown', onKey);
+        var cb = document.getElementById('continue-btn');
+        if (cb) cb.removeEventListener('click', finish);
+        overlay.classList.add('hidden');
+        resolve();
+      }
+      function onKey(e) { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); finish(); } }
+      var btn = document.getElementById('continue-btn');
+      if (btn) btn.addEventListener('click', finish);
+      document.addEventListener('keydown', onKey);
+    });
+  }
+
+  function showAFKDialog() {
+    return new Promise(function(resolve){
+      var overlay = document.getElementById('test-overlay');
+      overlay.classList.remove('hidden');
+      overlay.innerHTML =
+        '<div class="v-badge danger">' + icon('alert', 12) + 'Quality Check</div>' +
+        '<div class="v-overlay-title">Skor rendah beruntun</div>' +
+        '<div class="v-overlay-desc">' + AFK_THRESH + ' trial terakhir menunjukkan skor sangat rendah. Kamu mungkin lelah atau tidak fokus. Lanjut atau hentikan?</div>' +
+        '<div class="v-actions" style="max-width:360px;">' +
+          '<button class="v-btn" data-action="continue">' + icon('play', 16) + 'Lanjut</button>' +
+          '<button class="v-btn secondary" data-action="abort">' + icon('x', 16) + 'Hentikan & Lihat Hasil</button>' +
+        '</div>';
+      Array.prototype.forEach.call(overlay.querySelectorAll('[data-action]'), function(b){
+        b.addEventListener('click', function(){ overlay.classList.add('hidden'); resolve(b.dataset.action); });
+      });
+    });
+  }
+
+  /* ===== PAUSE MENU ===== */
+  function showPauseMenu(reason) {
+    return new Promise(function(resolve){
+      var overlay = document.getElementById('test-overlay');
+      overlay.classList.remove('hidden');
+
+      function renderMenu() {
+        overlay.innerHTML =
+          '<div class="v-badge danger">' + icon('pause', 12) + 'Paused</div>' +
+          '<div class="v-overlay-title">Tes Dijeda</div>' +
+          '<div class="v-overlay-desc">' + (reason || 'Pilih aksi di bawah.') + '</div>' +
+          '<div class="v-actions">' +
+            '<button class="v-btn" data-action="resume">' + icon('play', 16) + 'Resume</button>' +
+            '<button class="v-btn secondary" data-action="restart_trial">' + icon('refresh', 16) + 'Restart Trial</button>' +
+            '<button class="v-btn secondary" data-action="crosshair">' + icon('crosshair', 16) + 'Crosshair</button>' +
+            '<button class="v-btn secondary" data-action="restart_session">' + icon('home', 16) + 'Restart Session</button>' +
+            '<button class="v-btn danger" data-action="exit">' + icon('x', 16) + 'Exit to Setup</button>' +
+          '</div>' +
+          '<div class="v-error" id="pause-error" style="font-size:12px;min-height:16px;"></div>';
+
+        var errEl = document.getElementById('pause-error');
+        Array.prototype.forEach.call(overlay.querySelectorAll('[data-action]'), function(btn){
+          btn.addEventListener('click', function(e){
+            e.preventDefault();
+            var action = btn.dataset.action;
+            if (action === 'crosshair') { renderCrosshair(); return; }
+            if (action === 'resume') {
+              AudioSys.unlock(); requestLockSync();
+              setTimeout(function(){
+                if (isPointerLocked()) { overlay.classList.add('hidden'); resolve('resume'); }
+                else if (errEl) errEl.textContent = 'Pointer lock gagal. Klik Resume sekali lagi.';
+              }, 200);
+              return;
+            }
+            overlay.classList.add('hidden');
+            resolve(action);
+          });
+        });
+      }
+
+      function renderCrosshair() {
+        var colorList = ['#ffffff','#00ff00','#ffff00','#00ffff','#ff00ff','#ff0000','#45d6c4','#e8a33d'];
+        overlay.innerHTML =
+          '<div class="v-badge">' + icon('crosshair', 12) + 'Crosshair</div>' +
+          '<div class="v-overlay-title" style="font-size:22px;">Crosshair Settings</div>' +
+          '<div class="v-pause-ch">' +
+            '<div class="v-pause-ch-preview" id="pause-ch-preview">' + renderCrosshairSVG(state.crosshair, 130) + '</div>' +
+            '<div class="v-pause-ch-controls">' +
+              '<div style="display:flex;align-items:center;gap:8px;">' +
+                '<span class="v-slider-label">Color</span>' +
+                '<div class="v-color-row">' +
+                  colorList.map(function(c){
+                    return '<div class="v-color ' + (state.crosshair.color === c ? 'active' : '') + '" data-color="' + c + '" style="background:' + c + ';"></div>';
+                  }).join('') +
+                '</div>' +
+              '</div>' +
+              '<div class="v-slider-row"><span class="v-slider-label">Inner Len</span><input type="range" class="v-slider" data-prop="innerLength" min="0" max="20" step="1" value="' + state.crosshair.innerLength + '" /><span class="v-slider-val" data-val="innerLength">' + state.crosshair.innerLength + '</span></div>' +
+              '<div class="v-slider-row"><span class="v-slider-label">Inner Thick</span><input type="range" class="v-slider" data-prop="innerThickness" min="1" max="6" step="0.5" value="' + state.crosshair.innerThickness + '" /><span class="v-slider-val" data-val="innerThickness">' + state.crosshair.innerThickness + '</span></div>' +
+              '<div class="v-slider-row"><span class="v-slider-label">Inner Off</span><input type="range" class="v-slider" data-prop="innerOffset" min="0" max="20" step="1" value="' + state.crosshair.innerOffset + '" /><span class="v-slider-val" data-val="innerOffset">' + state.crosshair.innerOffset + '</span></div>' +
+              '<div class="v-toggles">' +
+                '<div class="v-toggle ' + (state.crosshair.dot ? 'active' : '') + '" data-toggle="dot"><span class="v-toggle-dot"></span>Dot</div>' +
+                '<div class="v-toggle ' + (state.crosshair.outline ? 'active' : '') + '" data-toggle="outline"><span class="v-toggle-dot"></span>Outline</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="v-actions" style="max-width:360px;">' +
+            '<button class="v-btn secondary" data-action="back">' + icon('arrowLeft', 16) + 'Kembali</button>' +
+          '</div>';
+        Array.prototype.forEach.call(overlay.querySelectorAll('.v-color'), function(sw){
+          sw.addEventListener('click', function(){
+            state.crosshair.color = sw.dataset.color;
+            saveCurrentToProfile(); renderCrosshair(); updateCrosshairPreview();
+          });
+        });
+        Array.prototype.forEach.call(overlay.querySelectorAll('.v-slider'), function(sl){
+          sl.addEventListener('input', function(){
+            var prop = sl.dataset.prop;
+            state.crosshair[prop] = parseFloat(sl.value);
+            var valEl = overlay.querySelector('[data-val="' + prop + '"]');
+            if (valEl) valEl.textContent = sl.value;
+            saveCurrentToProfile(); updateCrosshairPreview();
+          });
+        });
+        Array.prototype.forEach.call(overlay.querySelectorAll('.v-toggle'), function(tg){
+          tg.addEventListener('click', function(){
+            var prop = tg.dataset.toggle;
+            state.crosshair[prop] = !state.crosshair[prop];
+            saveCurrentToProfile(); renderCrosshair(); updateCrosshairPreview();
+          });
+        });
+        var backBtn = overlay.querySelector('[data-action="back"]');
+        if (backBtn) backBtn.addEventListener('click', function(){ renderMenu(); });
+      }
+
+      renderMenu();
+    });
+  }
+
+  /* ===== TRIAL RUNNER ===== */
+  function runSingleTest(pt, round) {
+    return new Promise(function(resolve){
+      if (!isPointerLocked()) { resolve('paused'); state.pauseReason = 'Pointer lock tidak aktif.'; return; }
+      resetTelemetry();
+      state.testActive = true;
+      state.testHits = 0; state.testMisses = 0; state.testWeightedHits = 0;
+      state.testRt = [];
+      state.testStartTime = performance.now();
+      state.targetSpawnTime = 0;
+      state.targetReacted = false;
+      state.testSens = pt.sens;
+      state.yaw = 0; state.pitch = 0;
+      state.hudTimer = null; state.testTimer = null;
+      state.trialResolve = resolve;
+      state.currentTaskType = pt.taskType || 'flick';
+      state.isWarmup = !!pt.warmup;
+      state.trackOnTarget = 0; state.trackTotal = 0;
+      state.missData = [];
+      state.streak = 0;
+      if (state.camera) state.camera.quaternion.set(0, 0, 0, 1);
+
+      var hudHits  = document.getElementById('hud-hits');
+      var hudTime  = document.getElementById('hud-time');
+      var hudSens  = document.getElementById('hud-sens');
+      var hudRound = document.getElementById('hud-round');
+      var hudTask  = document.getElementById('hud-task-label');
+      var timerBar = document.getElementById('timer-bar');
+      var timerBig = document.getElementById('timer-big');
+      if (hudRound) hudRound.textContent = state.isWarmup ? 'W' : round;
+      if (hudSens)  hudSens.textContent  = Math.round(pt.edpi);
+      if (hudTask)  hudTask.textContent  = TASK_MODES[state.currentTaskType].label;
+
+      spawnTarget();
+      var dur = state.isWarmup ? WARMUP_DURATION : TEST_DURATION;
+
+      state.hudTimer = setInterval(function(){
+        if (!state.testActive) return;
+        var elapsed = performance.now() - state.testStartTime;
+        var remaining = Math.max(0, (dur - elapsed) / 1000);
+        var pct = clamp(elapsed / dur, 0, 1) * 100;
+        if (hudHits) hudHits.textContent = state.testHits;
+        if (hudTime) hudTime.textContent = Math.ceil(remaining);
+        if (timerBar) timerBar.style.width = pct + '%';
+        if (timerBig) {
+          timerBig.textContent = Math.ceil(remaining);
+          timerBig.classList.toggle('warning', remaining < 4);
+        }
+      }, 80);
+
+      state.testTimer = setTimeout(function(){
+        if (!state.testActive) return;
+        state.testActive = false;
+        if (state.hudTimer) { clearInterval(state.hudTimer); state.hudTimer = null; }
+        if (state.target) { state.scene.remove(state.target); state.target = null; }
+        state.trialResolve = null;
+        resolve(computeTrialResult(pt, round));
+      }, dur);
+    });
+  }
+
+  function pauseTest(reason) {
+    if (!state.testActive) return;
+    state.testActive = false;
+    state.pauseReason = reason;
+    if (state.hudTimer) { clearInterval(state.hudTimer); state.hudTimer = null; }
+    if (state.testTimer) { clearTimeout(state.testTimer); state.testTimer = null; }
+    if (state.target) { state.scene.remove(state.target); state.target = null; }
+    releasePointerLock();
+    if (state.trialResolve) { var r = state.trialResolve; state.trialResolve = null; r('paused'); }
+  }
+
+  /* ===== METRICS ===== */
+  function computeTrialResult(pt, round) {
+    var n = telemetry.n, i;
+    var sum = 0, sum2 = 0, cnt = 0;
+    for (i = 0; i < n; i++) {
+      if (telemetry.w[i] < 0.2) continue;
+      var a = telemetry.a[i]; if (!isFinite(a)) continue;
+      sum += a; sum2 += a * a; cnt++;
+    }
+    var meanA = cnt ? sum / cnt : 0;
+    var varA  = cnt > 1 ? Math.max(0, sum2 / cnt - meanA * meanA) : 0;
+    var sdA   = Math.sqrt(varA);
+    var smoothness = 1 / (1 + sdA / SMOOTH_REF);
+
+    var dsum = 0, dcnt = 0, depthSum = 0;
+    for (i = 0; i < n; i++) {
+      if (telemetry.dist[i] <= 0) continue;
+      dsum += telemetry.dev[i]; depthSum += telemetry.dist[i]; dcnt++;
+    }
+    var devRad = dcnt ? dsum / dcnt : DEV_REF;
+    var deviation = clamp(devRad / DEV_REF, 0, 1);
+    var meanDepth = dcnt ? depthSum / dcnt : 0;
+
+    var accuracy;
+    if (state.currentTaskType === 'tracking') {
+      accuracy = state.trackTotal > 0 ? (state.trackOnTarget / state.trackTotal) : 0;
+    } else {
+      accuracy = (state.testWeightedHits + state.testMisses) > 0
+        ? state.testWeightedHits / (state.testWeightedHits + state.testMisses) : 0;
+    }
+
+    var meanRt = 1500;
+    if (state.testRt.length) {
+      var rs = 0;
+      for (i = 0; i < state.testRt.length; i++) rs += state.testRt[i];
+      meanRt = rs / state.testRt.length;
+    }
+    var rtNorm = clamp(meanRt / RT_REF, 0, 1);
+    var raw = 0.40 * accuracy + 0.30 * smoothness - 0.20 * deviation - 0.10 * rtNorm;
+    var score = clamp((raw + 0.30) * 100, 0, 100);
+
+    var t = {
+      index: round,
+      sens: pt.sens, dpi: pt.dpi, edpi: pt.edpi,
+      taskType: state.currentTaskType,
+      warmup: !!pt.warmup,
+      accuracy: accuracy, smoothness: smoothness, deviation: deviation,
+      rt: meanRt, rtNorm: rtNorm, score: score,
+      hits: state.testHits, misses: state.testMisses,
+      trackOnTarget: state.trackOnTarget, trackTotal: state.trackTotal,
+      frames: n, maxGap: telemetry.maxGap, meanDepth: meanDepth,
+      missData: state.missData.slice(), valid: false
+    };
+    t.valid = isValidTrial(t);
+    return t;
+  }
+
+  function isValidTrial(t) {
+    if (t.warmup) return false;
+    if (t.frames < 60) return false;
+    if (t.maxGap > 0.40) return false;
+    if (t.taskType === 'tracking') {
+      if (t.trackTotal < 200) return false;
+      if (t.accuracy < 0.10) return false;
+    } else {
+      if (t.hits + t.misses < 4) return false;
+      if (t.hits < 1) return false;
+      if (t.accuracy < 0.10) return false;
+      if (t.rt > 1500) return false;
+    }
+    if (t.smoothness < 0.02) return false;
+    return true;
+  }
+
+  /* ===== WORKER ===== */
+  function createWorker() {
+    try {
+      var src =
+        'var kKernel1D=' + kKernel1D.toString() + ';\n' +
+        'var kRegress1D=' + kRegress1D.toString() + ';\n' +
+        'var kOptimize1D=' + kOptimize1D.toString() + ';\n' +
+        'var kAcquire1D=' + kAcquire1D.toString() + ';\n' +
+        'self.onmessage=function(e){var m=e.data,res;' +
+          'if(m.cmd==="optimize"){res=kOptimize1D(m.obs,m.edpiMin,m.edpiMax,m.sigma);}' +
+          'else if(m.cmd==="suggest"){res=kAcquire1D(m.obs,m.edpiMin,m.edpiMax,m.sigma,m.kappa);}' +
+          'self.postMessage({id:m.id,result:res});};';
+      var url = URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
+      var w = new Worker(url);
+      w.onmessage = function(e){
+        var p = state.pending[e.data.id];
+        if (p) { delete state.pending[e.data.id]; p.resolve(e.data.result); }
+      };
+      w.onerror = function(){
+        state.worker = null;
+        for (var id in state.pending) {
+          var p = state.pending[id]; delete state.pending[id];
+          try { p.resolve(p.local()); } catch (err) { p.resolve(null); }
+        }
+      };
+      return w;
+    } catch (err) { return null; }
+  }
+  function requestSuggest() {
+    return new Promise(function(resolve){
+      var local = function(){ return kAcquire1D(state.observations, state.edpiMin, state.edpiMax, SIGMA_E, UCB_KAPPA); };
+      if (state.worker) {
+        var id = ++state.reqId;
+        state.pending[id] = { resolve: resolve, local: local };
+        state.worker.postMessage({ cmd: 'suggest', id: id, obs: state.observations, edpiMin: state.edpiMin, edpiMax: state.edpiMax, sigma: SIGMA_E, kappa: UCB_KAPPA });
+      } else resolve(local());
+    });
+  }
+  function requestOptimize() {
+    return new Promise(function(resolve){
+      var local = function(){ return kOptimize1D(state.observations, state.edpiMin, state.edpiMax, SIGMA_E); };
+      if (state.worker) {
+        var id = ++state.reqId;
+        state.pending[id] = { resolve: resolve, local: local };
+        state.worker.postMessage({ cmd: 'optimize', id: id, obs: state.observations, edpiMin: state.edpiMin, edpiMax: state.edpiMax, sigma: SIGMA_E });
+      } else resolve(local());
+    });
+  }
+
+  /* ===== 3D SCENE ===== */
+  var targetGeom = new THREE.SphereGeometry(0.55, 16, 16);
+  var targetMat  = new THREE.MeshStandardMaterial({ color: 0xff4655, emissive: 0xff4655, emissiveIntensity: 0.5, metalness: 0.3, roughness: 0.4 });
+
+  function computeVerticalFov(hFovDeg, aspect) {
+    var hRad = hFovDeg * Math.PI / 180;
+    var vRad = 2 * Math.atan(Math.tan(hRad / 2) / aspect);
+    return vRad * 180 / Math.PI;
+  }
+
+  function spawnTarget() {
+    if (!state.scene) return;
+    if (state.target) state.scene.remove(state.target);
+    state.target = new THREE.Mesh(targetGeom, targetMat);
+    var taskType = state.currentTaskType;
+
+    if (taskType === 'micro') {
+      var lastX = state.lastTargetX || 0, lastY = state.lastTargetY || 2.5;
+      var z = -12;
+      var nx = clamp(lastX + (Math.random() - 0.5) * 4, -7, 7);
+      var ny = clamp(lastY + (Math.random() - 0.5) * 4, 0.5, 5.5);
+      state.target.position.set(nx, ny, z);
+      state.lastTargetX = nx; state.lastTargetY = ny;
+    } else if (taskType === 'tracking') {
+      var mode = DISTANCE_MODES[state.distanceMode] || DISTANCE_MODES.mixed;
+      var d = mode.minDist + Math.random() * (mode.maxDist - mode.minDist);
+      state.trackBaseX = (Math.random() - 0.5) * 4;
+      state.trackBaseY = 2 + Math.random() * 2;
+      state.trackAmpX = 4 + Math.random() * 3;
+      state.trackAmpY = 1.5 + Math.random() * 1.5;
+      state.trackFx = 0.4 + Math.random() * 0.3;
+      state.trackFy = 0.35 + Math.random() * 0.3;
+      state.trackPhase = Math.random() * Math.PI * 2;
+      state.target.position.set(state.trackBaseX, state.trackBaseY, -d);
+      state.lastTargetX = state.trackBaseX; state.lastTargetY = state.trackBaseY;
+    } else {
+      var mode2 = DISTANCE_MODES[state.distanceMode] || DISTANCE_MODES.mixed;
+      var d2 = mode2.minDist + Math.random() * (mode2.maxDist - mode2.minDist);
+      var x = (Math.random() - 0.5) * 14;
+      var y = 0.5 + Math.random() * 5;
+      state.target.position.set(x, y, -d2);
+      state.lastTargetX = x; state.lastTargetY = y;
+    }
+    state.scene.add(state.target);
+    state.targetSpawnTime = performance.now();
+    state.targetReacted = false;
+  }
+
+  function initScene() {
+    if (state.renderer) { state.renderer.domElement.remove(); state.renderer.dispose(); }
+    var wrap = document.getElementById('scene-wrap');
+    if (!wrap) return;
+    var w = wrap.clientWidth || window.innerWidth;
+    var h = wrap.clientHeight || window.innerHeight;
+    state.scene = new THREE.Scene();
+    state.scene.background = new THREE.Color(0x0a0f14);
+    state.scene.fog = new THREE.Fog(0x0a0f14, 25, 45);
+    var aspect = w / h;
+    var vFov = computeVerticalFov(state.hFov, aspect);
+    state.camera = new THREE.PerspectiveCamera(vFov, aspect, 0.1, 100);
+    state.camera.position.set(0, 1.7, 0);
+    state.camera.quaternion.set(0, 0, 0, 1);
+    state.renderer = new THREE.WebGLRenderer({ antialias: true });
+    state.renderer.setSize(w, h);
+    state.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    state.scene.add(new THREE.AmbientLight(0x354050, 0.65));
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(5, 10, 7);
+    state.scene.add(dirLight);
+    var fillLight = new THREE.DirectionalLight(0x3a4a66, 0.4);
+    fillLight.position.set(-5, 5, -5);
+    state.scene.add(fillLight);
+    var grid = new THREE.GridHelper(60, 30, 0x2a3844, 0x1a242f);
+    grid.position.y = -0.5;
+    state.scene.add(grid);
+    state.raycaster = new THREE.Raycaster();
+    animate();
+  }
+
+  function resizeScene() {
+    if (!state.renderer) return;
+    var wrap = document.getElementById('scene-wrap'); if (!wrap) return;
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    if (w > 0 && h > 0) {
+      state.renderer.setSize(w, h);
+      if (state.camera) {
+        state.camera.aspect = w / h;
+        state.camera.fov = computeVerticalFov(state.hFov, w / h);
+        state.camera.updateProjectionMatrix();
+      }
+    }
+  }
+
+  function logFrame(now) {
+    var n = telemetry.n; if (n >= TELEM_CAP) return;
+    var q = state.camera.quaternion;
+    var omega = 0, alpha = 0;
+    if (_prevLogged) {
+      var dt = (now - _prevTime) / 1000;
+      if (dt > telemetry.maxGap) telemetry.maxGap = dt;
+      if (dt > 0.0005) {
+        _prevQInv.copy(_prevQ).invert();
+        _dq.copy(q).multiply(_prevQInv);
+        var angle = 2 * Math.acos(clamp(Math.abs(_dq.w), 0, 1));
+        var omegaRaw = angle / dt;
+        _omegaEMA += 0.4 * (omegaRaw - _omegaEMA);
+        var alphaRaw = (_omegaEMA - _prevOmegaEMA) / dt;
+        _alphaEMA += 0.4 * (alphaRaw - _alphaEMA);
+        _prevOmegaEMA = _omegaEMA;
+        omega = _omegaEMA; alpha = _alphaEMA;
+      }
+    }
+    if (state.target && !state.targetReacted && omega > RT_MOVE_THRESH) {
+      state.targetReacted = true;
+      state.testRt.push(now - state.targetSpawnTime);
+    }
+    var dist = 0, dev = 0, onTarget = false;
+    if (state.target) {
+      _fwd.set(0, 0, -1).applyQuaternion(q);
+      _toT.copy(state.target.position).sub(state.camera.position);
+      dist = _toT.length();
+      if (dist > 1e-4) {
+        _cross.crossVectors(_fwd, _toT);
+        dev = _cross.length() / dist;
+        if (state.currentTaskType === 'tracking' && dev < TRACK_THRESH_RAD) onTarget = true;
+      }
+    }
+    if (state.currentTaskType === 'tracking' && state.testActive) {
+      state.trackTotal++;
+      if (onTarget) state.trackOnTarget++;
+    }
+    if (state.graphEnabled) {
+      state.graphOmega[state.graphIdx] = omega;
+      state.graphDist[state.graphIdx] = dist;
+      state.graphIdx = (state.graphIdx + 1) % state.graphOmega.length;
+    }
+    telemetry.t[n] = now;
+    telemetry.qx[n] = q.x; telemetry.qy[n] = q.y; telemetry.qz[n] = q.z; telemetry.qw[n] = q.w;
+    telemetry.w[n] = omega; telemetry.a[n] = alpha;
+    telemetry.dev[n] = dev; telemetry.dist[n] = dist;
+    telemetry.n = n + 1;
+    _prevQ.copy(q); _prevTime = now; _prevLogged = true;
+  }
+
+  function animate() {
+    if (!state.renderer || !state.scene || !state.camera) return;
+    state.animId = requestAnimationFrame(animate);
+    var now = performance.now();
+    if (state.testActive && state.currentTaskType === 'tracking' && state.target) {
+      var elapsed = (now - state.testStartTime) / 1000;
+      state.target.position.x = state.trackBaseX + state.trackAmpX * Math.sin(elapsed * state.trackFx * Math.PI * 2);
+      state.target.position.y = state.trackBaseY + state.trackAmpY * Math.sin(elapsed * state.trackFy * Math.PI * 2 + state.trackPhase);
+    }
+    if (state.testActive) logFrame(now);
+    if (state.graphEnabled && state.graphCanvas && (now - state.graphLastRender) > GRAPH_UPDATE_MS) {
+      state.graphLastRender = now;
+      drawRealtimeGraph();
+    }
+    state.renderer.render(state.scene, state.camera);
+  }
+
+  /* ===== INPUT ===== */
+  function setupGlobalInputHandlers() {
+    document.addEventListener('mousemove', function(e){
+      if (!state.testActive || !state.camera) return;
+      if (!isPointerLocked()) return;
+      applyLook(e.movementX, e.movementY);
+    });
+    document.addEventListener('mousedown', function(e){
+      if (!state.testActive || !state.camera) return;
+      if (!isPointerLocked()) return;
+      if (e.button !== undefined && e.button !== 0) return;
+      AudioSys.shoot();
+      if (!state.target) return;
+      state.raycaster.setFromCamera({ x: 0, y: 0 }, state.camera);
+      var hits = state.raycaster.intersectObject(state.target);
+      var ch = document.getElementById('crosshair-container');
+      if (hits.length > 0) {
+        state.testHits++;
+        state.streak++;
+        if (state.streak >= 3) showStreak(state.streak);
+        AudioSys.hit();
+        var dist = hits[0].distance;
+        var wgt = 1 + 0.6 * clamp((dist - 8) / 8, 0, 1);
+        state.testWeightedHits += wgt;
+        if (ch) ch.classList.remove('miss');
+        if (state.currentTaskType !== 'tracking') spawnTarget();
+        else { state.targetSpawnTime = performance.now(); state.targetReacted = false; }
+      } else {
+        state.testMisses++;
+        state.streak = 0;
+        var sb = document.getElementById('streak-badge'); if (sb) sb.classList.remove('on');
+        AudioSys.miss();
+        if (ch) { ch.classList.add('miss'); setTimeout(function(){ ch.classList.remove('miss'); }, 80); }
+        if (state.missData.length < 200) {
+          _fwd.set(0, 0, -1).applyQuaternion(state.camera.quaternion);
+          _toT.copy(state.target.position).sub(state.camera.position).normalize();
+          _right.set(1, 0, 0).applyQuaternion(state.camera.quaternion);
+          _up.set(0, 1, 0).applyQuaternion(state.camera.quaternion);
+          var dx = _toT.dot(_right), dy = _toT.dot(_up), fz = _toT.dot(_fwd);
+          state.missData.push({ x: Math.atan2(dx, fz) * 180 / Math.PI, y: Math.atan2(dy, fz) * 180 / Math.PI });
+        }
+      }
+    });
+    document.addEventListener('pointerlockchange', function(){
+      if (!state.testActive) return;
+      if (!isPointerLocked()) pauseTest('Pointer lock terlepas.');
+    });
+    window.addEventListener('blur', function(){
+      if (state.testActive) pauseTest('Jendela kehilangan fokus.');
+    });
+    document.addEventListener('visibilitychange', function(){
+      if (document.hidden && state.testActive) pauseTest('Tab tidak aktif.');
+    });
+    document.addEventListener('keydown', function(e){
+      if (state.screen !== 'test') return;
+      if (e.code === 'KeyM') { e.preventDefault(); toggleSound(); }
+      if (e.code === 'KeyG') {
+        e.preventDefault();
+        state.graphEnabled = !state.graphEnabled;
+        saveCurrentToProfile();
+        var c = document.getElementById('realtime-graph');
+        if (c) c.classList.toggle('on', state.graphEnabled);
+        if (state.graphEnabled && !state.graphCanvas) initRealtimeGraph();
+      }
+    });
+    window.addEventListener('resize', resizeScene);
+  }
+
+  /* ===== CLEANUP / FINISH ===== */
+  function cleanupTest() {
+    state.testActive = false;
+    if (state.hudTimer) { clearInterval(state.hudTimer); state.hudTimer = null; }
+    if (state.testTimer) { clearTimeout(state.testTimer); state.testTimer = null; }
+    if (state.target && state.scene) { state.scene.remove(state.target); state.target = null; }
+    state.trialResolve = null;
+    releasePointerLock();
+  }
+
+  async function finishPSA() {
+    cleanupTest();
+    if (state.renderer) {
+      cancelAnimationFrame(state.animId);
+      state.renderer.domElement.remove();
+      state.renderer.dispose();
+      state.renderer = null;
+    }
+    state.screen = 'results';
+
+    var best = null, i;
+    for (i = 0; i < state.trials.length; i++) {
+      var t = state.trials[i];
+      if (t.valid && (!best || t.score > best.score)) best = t;
+    }
+
+    var opt;
+    if (state.observations.length >= 3) {
+      opt = await requestOptimize();
+      opt.sufficient = true;
+    } else {
+      opt = {
+        edpi: best ? best.edpi : state.baseEdpi,
+        score: best ? best.score : 0,
+        variance: 0, sufficient: false
+      };
+    }
+    /* Convert optimal eDPI → sens at user's DPI */
+    opt.sens = opt.edpi / state.dpi;
+    opt.dpi = state.dpi;
+    state.optimum = opt;
+
+    /* Save session */
+    var game = GAMES[state.game];
+    var sigma = Math.sqrt(Math.max(0, opt.variance || 0));
+    var conf = !opt.sufficient ? 'insufficient' : (sigma < 6 ? 'high' : (sigma < 12 ? 'mid' : 'low'));
+    var maxScore = 0;
+    for (var k = 0; k < state.trials.length; k++) if (state.trials[k].valid && state.trials[k].score > maxScore) maxScore = state.trials[k].score;
+    var prevSession = sessionHistory.length > 0 ? sessionHistory[sessionHistory.length - 1] : null;
+    pushHistory({
+      ts: Date.now(),
+      game: state.game,
+      gameLabel: game.label,
+      sens: opt.sens,
+      dpi: opt.dpi,
+      edpi: opt.edpi,
+      cm360: cm360(opt.sens, opt.dpi, game.yaw),
+      bestScore: maxScore,
+      confidence: conf,
+      distanceMode: state.distanceMode,
+      taskMix: state.taskMix,
+      hFov: state.hFov,
+      prevEdpi: prevSession ? prevSession.edpi : null
+    });
+    renderResults();
+  }
+
+  /* ===== RESULTS ===== */
+  function renderResults() {
+    body.classList.remove('no-scroll');
+    var game = GAMES[state.game];
+    var opt = state.optimum;
+    var trials = state.trials;
+    var optimalSens = opt.sens;
+    var optimalEdpi = opt.edpi;
+    var optimalDpi = state.dpi;
+    var cms = cm360(optimalSens, optimalDpi, game.yaw);
+
+    var sigma = Math.sqrt(Math.max(0, opt.variance || 0));
+    var conf;
+    if (!opt.sufficient) conf = 'data belum cukup';
+    else if (sigma < 6)  conf = 'tinggi';
+    else if (sigma < 12) conf = 'sedang';
+    else                 conf = 'rendah';
+
+    var bestScore = 0, i;
+    for (i = 0; i < trials.length; i++) if (trials[i].valid && trials[i].score > bestScore) bestScore = trials[i].score;
+    var maxScore = 1;
+    for (i = 0; i < trials.length; i++) if (trials[i].score > maxScore) maxScore = trials[i].score;
+
+    /* Grade */
+    var grade = bestScore >= 75 ? 'S' : bestScore >= 65 ? 'A' : bestScore >= 55 ? 'B' : bestScore >= 45 ? 'C' : 'D';
+
+    /* Session compare */
+    var prevSession = sessionHistory.length >= 2 ? sessionHistory[sessionHistory.length - 2] : null;
+    var deltaHtml = '';
+    if (prevSession && prevSession.edpi) {
+      var deltaEdpi = optimalEdpi - prevSession.edpi;
+      var deltaPct = (deltaEdpi / prevSession.edpi) * 100;
+      var cls = Math.abs(deltaPct) < 3 ? 'pos' : (deltaPct > 0 ? 'neg' : 'pos');
+      var sign = deltaPct >= 0 ? '+' : '';
+      deltaHtml = '<div class="v-recommend-delta ' + cls + '">' +
+        icon('chart', 12) + 'vs sesi lalu: ' + sign + deltaPct.toFixed(1) + '% (' + sign + Math.round(deltaEdpi) + ' eDPI)' +
+        '</div>';
+    }
+
+    /* Convergence bars */
+    var runningBest = 0;
+    var convBars = trials.map(function(t, idx){
+      if (t.valid && t.score > runningBest) runningBest = t.score;
+      var range = state.edpiMax - state.edpiMin;
+      var edpiPct = range > 0 ? clamp((t.edpi - state.edpiMin) / range, 0, 1) * 100 : 50;
+      var fillPct = clamp(runningBest, 0, 100);
+      var dim = t.valid ? '' : ';opacity:0.22';
+      return '<div class="v-bar-row">' +
+        '<div class="v-bar-label">' + (t.warmup ? 'W' : 'T' + (idx + 1)) + ' · ' + Math.round(t.edpi) + '</div>' +
+        '<div class="v-bar-track" style="position:relative;">' +
+          '<div class="v-bar-fill" style="position:absolute;left:0;top:0;bottom:0;width:' + fillPct + '%' + dim + ';"></div>' +
+          '<div style="position:absolute;left:' + edpiPct + '%;top:-2px;bottom:-2px;width:2px;background:var(--v-teal);"></div>' +
+        '</div>' +
+        '<div class="v-bar-val">' + t.score.toFixed(0) + '</div>' +
+      '</div>';
+    }).join('');
+
+    /* Score bars */
+    var scoreBars = trials.map(function(t, idx){
+      var pct = maxScore > 0 ? (t.score / maxScore) * 100 : 0;
+      var isBest = (t.valid && t.score === bestScore);
+      return '<div class="v-bar-row">' +
+        '<div class="v-bar-label">' + (t.warmup ? 'W' : 'T' + (idx + 1)) + ' ' + Math.round(t.edpi) +
+          '<span style="color:var(--v-muted-2);"> ' + (t.taskType.charAt(0).toUpperCase()) + '</span></div>' +
+        '<div class="v-bar-track"><div class="v-bar-fill teal" style="width:' + pct + '%' + (isBest ? '' : ';opacity:0.5') + (t.valid ? '' : ';background:#2a3844') + '"></div></div>' +
+        '<div class="v-bar-val">' + t.score.toFixed(0) + '</div></div>';
+    }).join('');
+
+    /* Table */
+    var tableRows = trials.map(function(t){
+      var mark = t.valid ? '' : ' ✕';
+      var taskCode = t.taskType.charAt(0).toUpperCase();
+      return '<tr' + (t.valid && t.score === bestScore ? ' class="best"' : '') + (t.valid ? '' : ' class="invalid"') + '>' +
+        '<td>' + (t.warmup ? 'W' : t.index) + mark + '</td>' +
+        '<td>' + taskCode + '</td>' +
+        '<td>' + Math.round(t.edpi) + '</td>' +
+        '<td>' + t.sens.toFixed(4) + '</td>' +
+        '<td>' + Math.round(t.dpi) + '</td>' +
+        '<td>' + (t.accuracy * 100).toFixed(0) + '%</td>' +
+        '<td>' + t.smoothness.toFixed(2) + '</td>' +
+        '<td>' + t.deviation.toFixed(2) + '</td>' +
+        '<td>' + t.rt.toFixed(0) + '</td>' +
+        '<td>' + t.score.toFixed(1) + '</td></tr>';
+    }).join('');
+
+    /* Heatmap */
+    var lastMiss = [];
+    for (var mm = state.trials.length - 1; mm >= 0; mm--) {
+      var tt = state.trials[mm];
+      if (tt.valid && tt.missData && tt.missData.length > 0) { lastMiss = tt.missData; break; }
+    }
+    var heatmapSvg = renderHeatmapSVG(lastMiss);
+
+    var validCount = state.observations.length;
+
+    body.innerHTML =
+      '<div class="v-container">' +
+
+        '<div class="v-hero">' +
+          '<div class="v-title">Optimization Complete</div>' +
+          '<div class="v-sub">' + game.label + ' · ' + TASK_MODES[state.taskMix].label + ' · ' + DISTANCE_MODES[state.distanceMode].label + ' · FOV ' + state.hFov + '° · ' + validCount + '/' + TOTAL_TRIALS + ' trials valid</div>' +
+        '</div>' +
+
+        '<div class="v-grid-2" style="grid-template-columns: 2fr 1fr; align-items: stretch;">' +
+          '<div class="v-recommend">' +
+            '<div class="v-recommend-label">' + icon('zap', 12) + 'Recommended Sens</div>' +
+            '<div class="v-recommend-value">' + optimalSens.toFixed(4) + '</div>' +
+            '<div class="v-recommend-sub">@ ' + Math.round(optimalDpi) + ' DPI · eDPI ' + Math.round(optimalEdpi) + ' · ' + cms.toFixed(1) + ' cm/360° · confidence: ' + conf + '</div>' +
+            deltaHtml +
+          '</div>' +
+          '<div class="v-panel neutral" style="justify-content:center; align-items:center; text-align:center; gap:8px;">' +
+            '<div class="v-label" style="margin-bottom:0;">Session Grade</div>' +
+            '<div class="v-grade">' + grade + '</div>' +
+            '<div class="v-panel-sub" style="margin-left:0;">Best score: ' + bestScore.toFixed(1) + '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="v-grid-2" style="align-items:start;">' +
+
+          '<div class="v-panel hollow">' +
+            '<div class="v-panel-header">' + icon('chart', 16) + '<div class="v-panel-title">Convergence</div></div>' +
+            '<div class="v-sub" style="font-size:11.5px;">Bar = best-so-far. Marker cyan = posisi eDPI diuji. Range: ' + Math.round(state.edpiMin) + ' – ' + Math.round(state.edpiMax) + '.</div>' +
+            '<div class="v-bars">' + convBars + '</div>' +
+          '</div>' +
+
+          '<div class="v-panel hollow">' +
+            '<div class="v-panel-header">' + icon('target', 16) + '<div class="v-panel-title">Miss Heatmap</div>' +
+              '<div class="v-panel-sub">' + lastMiss.length + ' shots</div></div>' +
+            '<div class="v-heatmap-wrap">' +
+              heatmapSvg +
+              '<div class="v-heatmap-legend">' +
+                '<div style="color:var(--v-muted); font-size:11px;">Posisi crosshair saat miss (derajat dari center).</div>' +
+                '<div class="v-legend-row"><div class="v-legend-dot" style="background:var(--v-red);"></div><span>Miss</span></div>' +
+                '<div class="v-legend-row"><div class="v-legend-dot" style="background:var(--v-teal);"></div><span>Target</span></div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+        '</div>' +
+
+        '<div class="v-panel hollow">' +
+          '<div class="v-panel-header">' + icon('chart', 16) + '<div class="v-panel-title">Score per Trial</div></div>' +
+          '<div class="v-bars">' + scoreBars + '</div>' +
+        '</div>' +
+
+        '<div class="v-panel hollow">' +
+          '<div class="v-panel-header">' + icon('grid', 16) + '<div class="v-panel-title">Raw Data</div></div>' +
+          '<div style="overflow-x:auto;">' +
+            '<table class="v-table"><thead><tr><th>#</th><th>Task</th><th>eDPI</th><th>Sens</th><th>DPI</th><th>Acc</th><th>Smooth</th><th>Dev</th><th>RT</th><th>Score</th></tr></thead><tbody>' + tableRows + '</tbody></table>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="' + (opt.sufficient ? 'v-info' : 'v-warn') + '">' +
+          icon(opt.sufficient ? 'info' : 'alert', 16) +
+          '<div>' +
+            (opt.sufficient
+              ? 'Optimizer bekerja di sumbu <strong>eDPI 1D</strong> — ini akar dari perbaikan dibanding versi sebelumnya. Karena rotasi FPS cuma bergantung pada eDPI, hasilnya <strong>tidak akan drift</strong> ke DPI acak. Kalau kamu ganti DPI hardware, sens harus diubah proporsional: <em>sens_baru = eDPI_optimal / DPI_baru</em>.'
+              : '<strong>Data belum cukup.</strong> Hanya ' + validCount + ' trial valid dari ' + TOTAL_TRIALS + '. Ulangi dengan lebih fokus.') +
+          '</div>' +
+        '</div>' +
+
+        '<div class="v-btn-row" style="justify-content:flex-end;">' +
+          '<button class="v-btn ghost" id="sf-restart-btn">' + icon('refresh', 14) + 'Ulangi</button>' +
+          '<button class="v-btn" id="sf-copy-btn">' + icon('copy', 14) + 'Copy ' + optimalSens.toFixed(4) + ' @ ' + Math.round(optimalDpi) + ' DPI</button>' +
+        '</div>' +
+
+        '<div class="v-disclaimer">Estimasi awal dari aim-test browser. Sesuaikan manual di game.</div>' +
+      '</div>';
+
+    document.getElementById('sf-copy-btn').addEventListener('click', function(){
+      var txt = 'sens ' + optimalSens.toFixed(4) + ' @ ' + Math.round(optimalDpi) + ' DPI (eDPI ' + Math.round(optimalEdpi) + ')';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function(){
+          var btn = document.getElementById('sf-copy-btn');
+          var orig = btn.innerHTML;
+          btn.innerHTML = icon('check', 14) + 'Tersalin';
+          setTimeout(function(){ btn.innerHTML = orig; }, 1400);
+        }).catch(function(){});
+      }
+    });
+    document.getElementById('sf-restart-btn').addEventListener('click', returnToSetup);
+  }
+
+  function renderHeatmapSVG(misses) {
+    var W = 220, H = 220, R = 100, CX = 110, CY = 110;
+    var maxAngle = 10;
+    var scale = R / maxAngle;
+    var rings = '';
+    for (var rr = 2; rr <= maxAngle; rr += 2) {
+      rings += '<circle cx="' + CX + '" cy="' + CY + '" r="' + (rr * scale) + '" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
+    }
+    var cross = '<line x1="' + (CX - R) + '" y1="' + CY + '" x2="' + (CX + R) + '" y2="' + CY + '" stroke="rgba(255,255,255,0.08)"/>' +
+                '<line x1="' + CX + '" y1="' + (CY - R) + '" x2="' + CX + '" y2="' + (CY + R) + '" stroke="rgba(255,255,255,0.08)"/>';
+    var dots = misses.map(function(m) {
+      var x = CX + clamp(m.x, -maxAngle, maxAngle) * scale;
+      var y = CY - clamp(m.y, -maxAngle, maxAngle) * scale;
+      return '<circle cx="' + x + '" cy="' + y + '" r="3" fill="rgba(255,70,85,0.75)" stroke="#ff4655" stroke-width="0.5"/>';
+    }).join('');
+    var center = '<circle cx="' + CX + '" cy="' + CY + '" r="4" fill="#00ffba"/>';
+    return '<svg class="v-heatmap-svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + rings + cross + dots + center + '</svg>';
+  }
+
+  /* ===== BOOT ===== */
+  function init() {
+    state.worker = createWorker();
+    brandIcon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7 L20 7 L18 17 L6 17 Z"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>';
+    setupGlobalInputHandlers();
+    root.hidden = false;
+    loader.classList.add('hidden');
+    render();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>
