@@ -166,8 +166,10 @@ footer{border-top:1px solid var(--line);padding:20px 0;color:var(--muted);font-s
 │   ├── docs.html    # DOCS ini (baru)
 │   ├── chat.html … sens.html  # 10 varian (JANGAN diubah)
 │   └── valo.html
+├── settings/
+│   └── config.toml      # Static Web Server config
+├── app.yaml             # Wasmer App.v0 (name/owner/package)
 ├── Staticfile       # root: public (Wasmer staticfile)
-├── settings/.gitkeep
 ├── README.md
 ├── LICENSE (MIT)
 └── .gitignore</pre>
@@ -178,11 +180,11 @@ footer{border-top:1px solid var(--line);padding:20px 0;color:var(--muted);font-s
 <ol>
 <li>Push repo ke GitHub (<code class="inline">yuumuu/aimfinder</code>).</li>
 <li>App sudah ada: <b>yuumuu/aimfinder</b> → <a href="https://aimfinder.wasmer.app">aimfinder.wasmer.app</a> (provider <code class="inline">staticfile</code>, <code class="inline">static_dir: public</code>, SWS 2.38.0).</li>
-<li>Deploy manual via CLI (sudah login sebagai <code class="inline">yuumuu</code>):<pre>wasmer deploy --owner yuumuu --app-name aimfinder --non-interactive</pre></li>
+<li>Deploy manual via CLI (sudah login sebagai <code class="inline">yuumuu</code>):<pre>wasmer deploy --non-interactive --build-remote</pre></li>
 <li>Atau auto-deploy dari dashboard Wasmer → Apps → aimfinder → Redeploy.</li>
 <li>Verifikasi: buka <code class="inline">/index.html</code>, <code class="inline">/docs.html</code>, dan satu varian (<code class="inline">/sens.html</code>).</li>
 </ol>
-<div class="note">Repo sengaja tanpa <code class="inline">wasmer.toml</code> / <code class="inline">app.yaml</code> — Shipit (staticfile) men-generate-nya saat build dari <code class="inline">Staticfile</code>.</div>
+<div class="note"><code class="inline">app.yaml</code> (App.v0) + <code class="inline">settings/config.toml</code> + <code class="inline">Staticfile</code> wajib ada untuk remote Anybuild (preset staticfile, SWS 2.38.0).</div>
 </section>
 
 <section class="card" id="faq"><h2><span>10</span>FAQ</h2>
