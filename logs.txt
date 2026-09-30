@@ -1,3 +1,4 @@
+Logs Update Versi AimFinder AI
 1. chat.html
 2. play.html
 3. gpt.html
