@@ -65,12 +65,12 @@ score = (flick * weight_flick + tracking * weight_tracking + switching * weight_
 2. App already exists: `yuumuu/aimfinder` → `https://aimfinder.wasmer.app` (provider `staticfile`, `static_dir: public`, SWS 2.38.0).
 3. Manual redeploy via CLI (logged in as `yuumuu`):
 ```bash
-wasmer deploy --owner yuumuu --app-name aimfinder --non-interactive
+wasmer deploy --non-interactive --build-remote
 ```
 4. Or Redeploy from Wasmer dashboard → Apps → aimfinder.
 5. Verify `/index.html`, `/docs.html`, `/sens.html`.
 
-> No `wasmer.toml` / `app.yaml` in repo by design — Shipit generates them at build from `Staticfile` (`root: public`).
+> `app.yaml` (`App.v0`, `package: .`) + `settings/config.toml` (SWS) + `Staticfile` (`root: public`) wajib ada untuk `wasmer deploy --build-remote` (remote Anybuild, preset `staticfile`, SWS 2.38.0).
 
 ### Local Development
 
@@ -90,7 +90,9 @@ aimfinder/
 │   ├── docs.html        # Dokumentasi lengkap (baru)
 │   ├── chat.html … sens.html  # 10 varian frozen (jangan diubah)
 │   └── valo.html
-├── settings/            # Wasmer runtime settings
+├── settings/
+│   └── config.toml      # Static Web Server config (host/port/root)
+├── app.yaml             # Wasmer App.v0 (name/owner/package)
 ├── Staticfile           # root: public
 ├── README.md
 ├── LICENSE
