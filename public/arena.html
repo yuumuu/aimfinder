@@ -658,21 +658,38 @@ var _qy=new THREE.Quaternion(),_qp=new THREE.Quaternion(),_pq=new THREE.Quaterni
 var _fw=new THREE.Vector3(),_tt=new THREE.Vector3(),_cr=new THREE.Vector3(),_rt=new THREE.Vector3(),_up=new THREE.Vector3();
 
 function countsToRad(c,dpi,sens,yaw){return (c/Math.max(1,dpi))*sens*yaw*2*Math.PI}
-/* Batas sudut per-event sadar-task: browser/driver kadang mengirim spike movementX/Y
-   sekali-event (bertanda benar, bermagnitudo sampah) yang tanpa clamp melempar pandangan
-   belasan derajat dalam 1 frame — terlihat sebagai glitch searah gerakan mouse.
-   Flick valid terdistribusi ke banyak event kecil sehingga lolos penuh:
-   tracking (pursuit lambat) max 0.06 rad/event, flick/micro max 0.5 rad/event.
+/* Anti-glitch 2 lapis (spike sampah terisolasi, bertanda benar, 400-700px — terbukti
+   dari diagnostik lapangan; flick violent legit bisa sama besarnya, jadi magnitudo
+   saja tak cukup — yang membedakan adalah pola temporal):
+   LAPIS 1 — outlier adaptif: event > 6x median 12 event terakhir dipotong ke ambang
+   (lantai 40px tracking / 150px flick-micro agar start dingin tidak kecekik). Gerakan
+   berkelanjutan (flick) menaikkan median dalam ~10 event lalu lolos penuh; spike
+   terisolasi selalu terpotong. Median kebal 1-2 sampel sampah. Buffer di-seed
+   4 sampel kecil tiap trial agar proteksi aktif sejak event pertama.
+   LAPIS 2 — cap sudut per-event sadar-task (tracking 0.03 rad, flick/micro 0.5 rad).
    Nilai non-finite (undefined/NaN dari driver aneh) dibuang ke 0. */
-function maxLookRad(){return state.curTask==='tracking'?0.06:0.5}
+function outlierLimit(){
+  var b=state.lookBuf,n=b?b.length:0;
+  if(n<4)return 1e9;
+  var s=b.slice().sort(function(x,y){return x-y});
+  var m=s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2;
+  var fl=state.curTask==='tracking'?40:150,lim=6*m;
+  return lim>fl?lim:fl;
+}
+function maxLookRad(){return state.curTask==='tracking'?0.03:0.5}
 function applyLook(mx,my){
   var g=GAMES[state.game];
   var dpi=safeNum(state.tDpi,safeNum(state.dpi,800))||800;
   var pc=countsToRad(1,dpi,state.tSens,g.yaw);
   var rmx=isFinite(mx)?mx:0,rmy=isFinite(my)?my:0;
   if(state.dbg){var am=Math.abs(rmx)>Math.abs(rmy)?Math.abs(rmx):Math.abs(rmy);if(am>state.dbg.maxMX)state.dbg.maxMX=Math.round(am)}
+  if(!state.lookBuf)state.lookBuf=[];
+  var ol=outlierLimit();
+  var ox=clamp(rmx,-ol,ol),oy=clamp(rmy,-ol,ol);
+  state.lookBuf.push(Math.abs(rmx)>Math.abs(rmy)?Math.abs(rmx):Math.abs(rmy));
+  if(state.lookBuf.length>12)state.lookBuf.shift();
   var lim=maxLookRad()/Math.max(1e-9,pc);
-  var cx=clamp(rmx,-lim,lim),cy=clamp(rmy,-lim,lim);
+  var cx=clamp(ox,-lim,lim),cy=clamp(oy,-lim,lim);
   if(state.dbg&&(cx!==rmx||cy!==rmy))state.dbg.trims++;
   state.yaw-=cx*pc;state.pitch-=cy*pc;state.pitch=clamp(state.pitch,-Math.PI/2.3,Math.PI/2.3);
   _qy.setFromAxisAngle(AX_Y,state.yaw);_qp.setFromAxisAngle(AX_X,state.pitch);state.camera.quaternion.copy(_qy).multiply(_qp);
@@ -1587,7 +1604,7 @@ function runOneTest(pt,round){
     state.hudTimer=null;state.testTimer=null;state.resolver=res;
     state.curTask=pt.taskType||'flick';state.isWarmup=!!pt.warmup;
     state.tOn=0;state.tTot=0;state.missData=[];state.streak=0;
-    state.dbg={maxMX:0,trims:0};
+    state.dbg={maxMX:0,trims:0};state.lookBuf=[3,3,3,3];
     state.prevTargetX=0;state.prevTargetY=0;state.prevTargetZ=0;
     if(state.camera)state.camera.quaternion.set(0,0,0,1);
     var hh=document.getElementById('hud-hits'),ht=document.getElementById('hud-time'),hs=document.getElementById('hud-sens'),hr=document.getElementById('hud-round'),htl=document.getElementById('hud-task-label'),tb=document.getElementById('timer-bar'),tb2=document.getElementById('timer-big');
