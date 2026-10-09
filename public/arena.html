@@ -658,6 +658,12 @@ var _qy=new THREE.Quaternion(),_qp=new THREE.Quaternion(),_pq=new THREE.Quaterni
 var _fw=new THREE.Vector3(),_tt=new THREE.Vector3(),_cr=new THREE.Vector3(),_rt=new THREE.Vector3(),_up=new THREE.Vector3();
 
 function countsToRad(c,dpi,sens,yaw){return (c/Math.max(1,dpi))*sens*yaw*2*Math.PI}
+/* Batasi delta mouse per-event: browser/driver kadang mengirim spike movementX/Y
+   raksasa sekali-event (atau undefined/NaN) yang tanpa clamp akan melempar pandangan
+   puluhan derajat dalam 1 frame. 300px/event jauh di atas flick manusia tercepat
+   (flick valid terdistribusi ke banyak event), jadi feel tidak berubah. */
+var MAX_LOOK_PX=300;
+function clampLook(v){if(!isFinite(v))return 0;return clamp(v,-MAX_LOOK_PX,MAX_LOOK_PX)}
 function applyLook(mx,my){var g=GAMES[state.game];var dpi=safeNum(state.tDpi,safeNum(state.dpi,800))||800;var pc=countsToRad(1,dpi,state.tSens,g.yaw);state.yaw-=mx*pc;state.pitch-=my*pc;state.pitch=clamp(state.pitch,-Math.PI/2.3,Math.PI/2.3);_qy.setFromAxisAngle(AX_Y,state.yaw);_qp.setFromAxisAngle(AX_X,state.pitch);state.camera.quaternion.copy(_qy).multiply(_qp)}
 
 /* ═══ POINTER LOCK ═══ */
@@ -1509,11 +1515,11 @@ function showCountdown(){
     step();
   });
 }
-function showComplete(round,t){
+function showComplete(round,tr){
   return new Promise(function(res){
-    var g=t.score>=75?'S':t.score>=65?'A':t.score>=55?'B':t.score>=45?'C':'D';
-    var b=t.valid?'<div class="badge success">'+icon('check',12)+'VALID</div>':'<div class="badge danger">'+icon('x',12)+'ANOMALY</div>';
-    var html=b+'<div class="overlay-title">'+t('trial_done').replace('{n}',round)+'</div><div class="overlay-stats"><div class="overlay-stat"><div class="overlay-stat-label">'+t('score')+'</div><div class="overlay-stat-value cyan">'+t.score.toFixed(1)+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('grade')+'</div><div class="overlay-stat-value gold">'+g+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('acc')+'</div><div class="overlay-stat-value">'+(t.accuracy*100).toFixed(0)+'%</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('smooth')+'</div><div class="overlay-stat-value">'+t.smoothness.toFixed(2)+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('rt')+'</div><div class="overlay-stat-value">'+t.rt.toFixed(0)+'<span style="font-size:11px;color:var(--text-3)">ms</span></div></div></div><div class="actions" style="max-width:360px"><button class="btn lg" id="cont" style="justify-content:center">'+icon('arrowRight',14)+t('continue')+'</button></div><div class="overlay-cd">Auto-advance in <b id="acd">'+TRIAL_AUTO_SEC+'</b>s</div><div class="overlay-hint"><span class="kbd">SPACE</span>to continue · <span class="kbd">Q</span>exit</div>';
+    var g=tr.score>=75?'S':tr.score>=65?'A':tr.score>=55?'B':tr.score>=45?'C':'D';
+    var b=tr.valid?'<div class="badge success">'+icon('check',12)+'VALID</div>':'<div class="badge danger">'+icon('x',12)+'ANOMALY</div>';
+    var html=b+'<div class="overlay-title">'+t('trial_done').replace('{n}',round)+'</div><div class="overlay-stats"><div class="overlay-stat"><div class="overlay-stat-label">'+t('score')+'</div><div class="overlay-stat-value cyan">'+tr.score.toFixed(1)+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('grade')+'</div><div class="overlay-stat-value gold">'+g+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('acc')+'</div><div class="overlay-stat-value">'+(tr.accuracy*100).toFixed(0)+'%</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('smooth')+'</div><div class="overlay-stat-value">'+tr.smoothness.toFixed(2)+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('rt')+'</div><div class="overlay-stat-value">'+tr.rt.toFixed(0)+'<span style="font-size:11px;color:var(--text-3)">ms</span></div></div></div><div class="actions" style="max-width:360px"><button class="btn lg" id="cont" style="justify-content:center">'+icon('arrowRight',14)+t('continue')+'</button></div><div class="overlay-cd">Auto-advance in <b id="acd">'+TRIAL_AUTO_SEC+'</b>s</div><div class="overlay-hint"><span class="kbd">SPACE</span>to continue · <span class="kbd">Q</span>exit</div>';
     openOverlay(html);
     var cd=TRIAL_AUTO_SEC,cdE=document.getElementById('acd');
     var timer=setInterval(function(){cd--;if(cdE)cdE.textContent=Math.max(0,cd);if(cd<=0)fin()},1000);
@@ -1538,19 +1544,19 @@ function showPause(reason){
       Array.prototype.forEach.call(o.querySelectorAll('[data-a]'),function(b){
         b.addEventListener('click',function(e){
           e.preventDefault();var a=b.dataset.a;
-          if(a==='crosshair'){renderCH();return}
+          if(a==='crosshair'){renderPauseCH();return}
           if(a==='resume'){AudioSys.unlock();lockSync();setTimeout(function(){if(isLocked()){closeOverlay();res('resume')}else if(pe)pe.textContent='Pointer lock failed. Click Resume once more.'},200);return}
           closeOverlay();res(a);
         });
       });
     }
-    function renderCH(){
+    function renderPauseCH(){
       var cl=['#ffffff','#00ff00','#ffff00','#00ffff','#ff00ff','#ff0000','#ffb000','#5eead4'];
       openOverlay('<div class="badge">'+icon('crosshair',12)+'CROSSHAIR</div><div class="overlay-title" style="font-size:18px">Crosshair Settings</div><div class="pause-ch"><div class="pause-ch-preview" id="pause-ch-preview">'+renderCH(state.crosshair,130)+'</div><div class="pause-ch-controls"><div style="display:flex;align-items:center;gap:8px"><span class="slider-label">Color</span><div class="colors">'+cl.map(function(c){return'<div class="color '+(state.crosshair.color===c?'active':'')+'" data-color="'+c+'" style="background:'+c+'"></div>'}).join('')+'</div></div><div class="slider-row"><span class="slider-label">Inner Len</span><input type="range" class="slider" data-p="innerLength" min="0" max="20" step="1" value="'+state.crosshair.innerLength+'" /><span class="slider-val" data-v="innerLength">'+state.crosshair.innerLength+'</span></div><div class="slider-row"><span class="slider-label">Inner Thick</span><input type="range" class="slider" data-p="innerThickness" min="1" max="6" step=".5" value="'+state.crosshair.innerThickness+'" /><span class="slider-val" data-v="innerThickness">'+state.crosshair.innerThickness+'</span></div><div class="toggles"><div class="tgl '+(state.crosshair.dot?'active':'')+'" data-t="dot"><span class="tgl-dot"></span>Dot</div><div class="tgl '+(state.crosshair.outline?'active':'')+'" data-t="outline"><span class="tgl-dot"></span>Outline</div></div></div></div><div class="actions" style="max-width:360px"><button class="btn ghost" data-a="back" style="justify-content:center">'+icon('arrowLeft',14)+'BACK</button></div>');
       var o=overlayEl();
-      Array.prototype.forEach.call(o.querySelectorAll('.color'),function(sw){sw.addEventListener('click',function(){state.crosshair.color=sw.dataset.color;saveProf();renderCH();updateCHPreview()})});
+      Array.prototype.forEach.call(o.querySelectorAll('.color'),function(sw){sw.addEventListener('click',function(){state.crosshair.color=sw.dataset.color;saveProf();renderPauseCH();updateCHPreview()})});
       Array.prototype.forEach.call(o.querySelectorAll('.slider'),function(sl){sl.addEventListener('input',function(){var p=sl.dataset.p;state.crosshair[p]=parseFloat(sl.value);var v=o.querySelector('[data-v="'+p+'"]');if(v)v.textContent=sl.value;saveProf();updateCHPreview()})});
-      Array.prototype.forEach.call(o.querySelectorAll('.tgl'),function(tg){tg.addEventListener('click',function(){var p=tg.dataset.t;state.crosshair[p]=!state.crosshair[p];saveProf();renderCH();updateCHPreview()})});
+      Array.prototype.forEach.call(o.querySelectorAll('.tgl'),function(tg){tg.addEventListener('click',function(){var p=tg.dataset.t;state.crosshair[p]=!state.crosshair[p];saveProf();renderPauseCH();updateCHPreview()})});
       var bb=o.querySelector('[data-a="back"]');if(bb)bb.addEventListener('click',menu);
     }
     menu();
@@ -1572,6 +1578,7 @@ function runOneTest(pt,round){
     if(hr)hr.textContent=state.isWarmup?'W':round;
     if(hs)hs.textContent=Math.round(pt.edpi);
     if(htl)htl.textContent=TASKS[state.curTask].label;
+    try{updateCHPreview()}catch(e){}
     spawnTarget();
     var dur=state.isWarmup?WARMUP_MS:TEST_MS;
     state.hudTimer=setInterval(function(){
@@ -1878,7 +1885,7 @@ function animate(){
   state.renderer.render(state.scene,state.camera);
 }
 function setupGlobalInput(){
-  document.addEventListener('mousemove',function(e){if(!state.active||!state.camera)return;if(!isLocked())return;applyLook(e.movementX,e.movementY)});
+  document.addEventListener('mousemove',function(e){if(!state.active||!state.camera)return;if(!isLocked())return;applyLook(clampLook(e.movementX),clampLook(e.movementY))});
   document.addEventListener('mousedown',function(e){
     if(!state.active||!state.camera)return;if(!isLocked())return;
     if(e.button!==undefined&&e.button!==0)return;
