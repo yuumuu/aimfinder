@@ -532,7 +532,7 @@ var DPI_PRESETS=[400,800,1000,1200,1600,3200,6400];
 
 var TOTAL_TRIALS=12,EXPLORE=4,TEST_MS=12000,ACTIVE_CD=3,TRIAL_AUTO_SEC=10,WARMUP_MS=8000;
 var SIGMA_E=120,UCB_K=16,SMOOTH_REF=300,RT_REF=800,DEV_REF=.3,RT_THRESH=1,TELEM_CAP=8192;
-var TRACK_THRESH_RAD=.09,AFK_THRESH=3,HIST_MAX=20,GRAPH_MS=100;
+var AFK_THRESH=3,HIST_MAX=20,GRAPH_MS=100;
 var MIN_FLICK_SEP=0.06;
 
 var TABS=[
@@ -658,13 +658,25 @@ var _qy=new THREE.Quaternion(),_qp=new THREE.Quaternion(),_pq=new THREE.Quaterni
 var _fw=new THREE.Vector3(),_tt=new THREE.Vector3(),_cr=new THREE.Vector3(),_rt=new THREE.Vector3(),_up=new THREE.Vector3();
 
 function countsToRad(c,dpi,sens,yaw){return (c/Math.max(1,dpi))*sens*yaw*2*Math.PI}
-/* Batasi delta mouse per-event: browser/driver kadang mengirim spike movementX/Y
-   raksasa sekali-event (atau undefined/NaN) yang tanpa clamp akan melempar pandangan
-   puluhan derajat dalam 1 frame. 300px/event jauh di atas flick manusia tercepat
-   (flick valid terdistribusi ke banyak event), jadi feel tidak berubah. */
-var MAX_LOOK_PX=300;
-function clampLook(v){if(!isFinite(v))return 0;return clamp(v,-MAX_LOOK_PX,MAX_LOOK_PX)}
-function applyLook(mx,my){var g=GAMES[state.game];var dpi=safeNum(state.tDpi,safeNum(state.dpi,800))||800;var pc=countsToRad(1,dpi,state.tSens,g.yaw);state.yaw-=mx*pc;state.pitch-=my*pc;state.pitch=clamp(state.pitch,-Math.PI/2.3,Math.PI/2.3);_qy.setFromAxisAngle(AX_Y,state.yaw);_qp.setFromAxisAngle(AX_X,state.pitch);state.camera.quaternion.copy(_qy).multiply(_qp)}
+/* Batas sudut per-event sadar-task: browser/driver kadang mengirim spike movementX/Y
+   sekali-event (bertanda benar, bermagnitudo sampah) yang tanpa clamp melempar pandangan
+   belasan derajat dalam 1 frame — terlihat sebagai glitch searah gerakan mouse.
+   Flick valid terdistribusi ke banyak event kecil sehingga lolos penuh:
+   tracking (pursuit lambat) max 0.06 rad/event, flick/micro max 0.5 rad/event.
+   Nilai non-finite (undefined/NaN dari driver aneh) dibuang ke 0. */
+function maxLookRad(){return state.curTask==='tracking'?0.06:0.5}
+function applyLook(mx,my){
+  var g=GAMES[state.game];
+  var dpi=safeNum(state.tDpi,safeNum(state.dpi,800))||800;
+  var pc=countsToRad(1,dpi,state.tSens,g.yaw);
+  var rmx=isFinite(mx)?mx:0,rmy=isFinite(my)?my:0;
+  if(state.dbg){var am=Math.abs(rmx)>Math.abs(rmy)?Math.abs(rmx):Math.abs(rmy);if(am>state.dbg.maxMX)state.dbg.maxMX=Math.round(am)}
+  var lim=maxLookRad()/Math.max(1e-9,pc);
+  var cx=clamp(rmx,-lim,lim),cy=clamp(rmy,-lim,lim);
+  if(state.dbg&&(cx!==rmx||cy!==rmy))state.dbg.trims++;
+  state.yaw-=cx*pc;state.pitch-=cy*pc;state.pitch=clamp(state.pitch,-Math.PI/2.3,Math.PI/2.3);
+  _qy.setFromAxisAngle(AX_Y,state.yaw);_qp.setFromAxisAngle(AX_X,state.pitch);state.camera.quaternion.copy(_qy).multiply(_qp);
+}
 
 /* ═══ POINTER LOCK ═══ */
 function isLocked(){return state.renderer&&document.pointerLockElement===state.renderer.domElement}
@@ -1456,14 +1468,16 @@ async function runOptimizer(){
   }
   for(var i=0;i<TOTAL_TRIALS;i++){
     var pt=await pickPoint(i);pt.taskType=taskSeq();
-    var done=false;
+    var done=false,att=0;
     while(!done){
+      att++;
       await showIntro(i+1,pt);await sleep(80);
       if(!isLocked()){var a=await showPause('Pointer lock failed to activate.');if(a==='restart_trial')continue;if(a==='restart_session'||a==='exit'){returnToSetup();return}continue}
       await showCountdown();
       if(!isLocked()){var a2=await showPause('Pointer lock lost.');if(a2==='restart_trial')continue;if(a2==='restart_session'||a2==='exit'){returnToSetup();return}continue}
       var res=await runOneTest(pt,i+1);
       if(res==='paused'){var a3=await showPause(state.pauseReason);if(a3==='resume')continue;if(a3==='restart_trial')continue;if(a3==='restart_session'||a3==='exit'){returnToSetup();return}continue}
+      res.attempts=att;
       registerTrial(res);unlock();AudioSys.complete();
       if(res.valid&&res.score<8)state.consecBad++;else if(!res.valid)state.consecBad++;else state.consecBad=0;
       await showComplete(i+1,res);
@@ -1486,7 +1500,7 @@ async function pickPoint(i){
   var se=await reqSuggest();
   return{sens:se/dpi,dpi:dpi,edpi:se};
 }
-function registerTrial(t){state.trials.push(t);if(t.valid)state.obs.push({edpi:t.edpi,score:t.score})}
+function registerTrial(t){state.trials.push(t);if(t.valid)state.obs.push({edpi:t.edpi,score:t.score});try{console.log('[trial '+t.index+' '+t.taskType+'] spike≤'+(t.dbg?t.dbg.maxMX:0)+'px trim '+(t.dbg?t.dbg.trims:0)+' att '+(t.attempts||1))}catch(e){}}
 
 /* ═══ OVERLAYS ═══ */
 function showIntro(round,pt){
@@ -1519,7 +1533,8 @@ function showComplete(round,tr){
   return new Promise(function(res){
     var g=tr.score>=75?'S':tr.score>=65?'A':tr.score>=55?'B':tr.score>=45?'C':'D';
     var b=tr.valid?'<div class="badge success">'+icon('check',12)+'VALID</div>':'<div class="badge danger">'+icon('x',12)+'ANOMALY</div>';
-    var html=b+'<div class="overlay-title">'+t('trial_done').replace('{n}',round)+'</div><div class="overlay-stats"><div class="overlay-stat"><div class="overlay-stat-label">'+t('score')+'</div><div class="overlay-stat-value cyan">'+tr.score.toFixed(1)+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('grade')+'</div><div class="overlay-stat-value gold">'+g+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('acc')+'</div><div class="overlay-stat-value">'+(tr.accuracy*100).toFixed(0)+'%</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('smooth')+'</div><div class="overlay-stat-value">'+tr.smoothness.toFixed(2)+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('rt')+'</div><div class="overlay-stat-value">'+tr.rt.toFixed(0)+'<span style="font-size:11px;color:var(--text-3)">ms</span></div></div></div><div class="actions" style="max-width:360px"><button class="btn lg" id="cont" style="justify-content:center">'+icon('arrowRight',14)+t('continue')+'</button></div><div class="overlay-cd">Auto-advance in <b id="acd">'+TRIAL_AUTO_SEC+'</b>s</div><div class="overlay-hint"><span class="kbd">SPACE</span>to continue · <span class="kbd">Q</span>exit</div>';
+    var dg=tr.dbg||{maxMX:0,trims:0},attN=tr.attempts||1;
+    var html=b+'<div class="overlay-title">'+t('trial_done').replace('{n}',round)+'</div><div class="overlay-stats"><div class="overlay-stat"><div class="overlay-stat-label">'+t('score')+'</div><div class="overlay-stat-value cyan">'+tr.score.toFixed(1)+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('grade')+'</div><div class="overlay-stat-value gold">'+g+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('acc')+'</div><div class="overlay-stat-value">'+(tr.accuracy*100).toFixed(0)+'%</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('smooth')+'</div><div class="overlay-stat-value">'+tr.smoothness.toFixed(2)+'</div></div><div class="overlay-stat"><div class="overlay-stat-label">'+t('rt')+'</div><div class="overlay-stat-value">'+tr.rt.toFixed(0)+'<span style="font-size:11px;color:var(--text-3)">ms</span></div></div></div><div class="actions" style="max-width:360px"><button class="btn lg" id="cont" style="justify-content:center">'+icon('arrowRight',14)+t('continue')+'</button></div><div class="overlay-cd">Auto-advance in <b id="acd">'+TRIAL_AUTO_SEC+'</b>s</div><div class="overlay-cd" style="font-size:10px;color:var(--text-3)">spike≤'+dg.maxMX+'px · trim '+dg.trims+' · att '+attN+'</div><div class="overlay-hint"><span class="kbd">SPACE</span>to continue · <span class="kbd">Q</span>exit</div>';
     openOverlay(html);
     var cd=TRIAL_AUTO_SEC,cdE=document.getElementById('acd');
     var timer=setInterval(function(){cd--;if(cdE)cdE.textContent=Math.max(0,cd);if(cd<=0)fin()},1000);
@@ -1572,6 +1587,7 @@ function runOneTest(pt,round){
     state.hudTimer=null;state.testTimer=null;state.resolver=res;
     state.curTask=pt.taskType||'flick';state.isWarmup=!!pt.warmup;
     state.tOn=0;state.tTot=0;state.missData=[];state.streak=0;
+    state.dbg={maxMX:0,trims:0};
     state.prevTargetX=0;state.prevTargetY=0;state.prevTargetZ=0;
     if(state.camera)state.camera.quaternion.set(0,0,0,1);
     var hh=document.getElementById('hud-hits'),ht=document.getElementById('hud-time'),hs=document.getElementById('hud-sens'),hr=document.getElementById('hud-round'),htl=document.getElementById('hud-task-label'),tb=document.getElementById('timer-bar'),tb2=document.getElementById('timer-big');
@@ -1624,7 +1640,7 @@ function computeResult(pt,round){
   var rtN=clamp(meanRt/RT_REF,0,1);
   var raw=.4*acc+.3*smooth-.2*deviation-.1*rtN;
   var score=clamp((raw+.3)*100,0,100);
-  var t={index:round,sens:pt.sens,dpi:pt.dpi,edpi:pt.edpi,taskType:state.curTask,warmup:!!pt.warmup,accuracy:acc,smoothness:smooth,deviation:deviation,rt:meanRt,rtNorm:rtN,score:score,hits:state.hits,misses:state.misses,trackOnTarget:state.tOn,trackTotal:state.tTot,frames:n,maxGap:tel.maxGap,meanDepth:meanDepth,missData:state.missData.slice(),valid:false};
+  var t={index:round,sens:pt.sens,dpi:pt.dpi,edpi:pt.edpi,taskType:state.curTask,warmup:!!pt.warmup,accuracy:acc,smoothness:smooth,deviation:deviation,rt:meanRt,rtNorm:rtN,score:score,hits:state.hits,misses:state.misses,trackOnTarget:state.tOn,trackTotal:state.tTot,frames:n,maxGap:tel.maxGap,meanDepth:meanDepth,missData:state.missData.slice(),valid:false,dbg:{maxMX:state.dbg?state.dbg.maxMX:0,trims:state.dbg?state.dbg.trims:0}};
   t.valid=isValid(t);
   return t;
 }
@@ -1864,7 +1880,7 @@ function logFrame(now){
   if(_pl){var dt=(now-_pt)/1000;if(dt>tel.maxGap)tel.maxGap=dt;if(dt>.0005){_pqi.copy(_pq).invert();_dq.copy(q).multiply(_pqi);var ang=2*Math.acos(clamp(Math.abs(_dq.w),0,1)),omR=ang/dt;_om+=.4*(omR-_om);var alR=(_om-_pom)/dt;_al+=.4*(alR-_al);_pom=_om;omega=_om;alpha=_al}}
   if(state.target&&!state.reacted&&omega>RT_THRESH){state.reacted=true;state.rts.push(now-state.spawnTime)}
   var dist=0,dev=0,onT=false;
-  if(state.target){_fw.set(0,0,-1).applyQuaternion(q);_tt.copy(state.target.position).sub(state.camera.position);dist=_tt.length();if(dist>1e-4){_cr.crossVectors(_fw,_tt);dev=_cr.length()/dist;if(state.curTask==='tracking'&&dev<TRACK_THRESH_RAD)onT=true}}
+  if(state.target){_fw.set(0,0,-1).applyQuaternion(q);_tt.copy(state.target.position).sub(state.camera.position);dist=_tt.length();if(dist>1e-4){_cr.crossVectors(_fw,_tt);dev=_cr.length()/dist;if(state.curTask==='tracking'){var angR=Math.asin(clamp(0.55/Math.max(0.1,dist),0,1));if((dev-angR)<0.004)onT=true}}}
   if(state.curTask==='tracking'&&state.active){state.tTot++;if(onT)state.tOn++}
   if(state.curTask==='tracking'&&onT!==state._onT){state._onT=onT;var chEl=document.getElementById('crosshair-container');if(chEl)chEl.classList.toggle('on-target',onT);try{if(state.target){state.target.material.emissive.setHex(onT?0x2bd98a:0xffb000);state.target.material.emissiveIntensity=onT?1:.5}}catch(e){}}
   else if(state.curTask!=='tracking'&&state._onT){state._onT=false;var chEl2=document.getElementById('crosshair-container');if(chEl2)chEl2.classList.remove('on-target')}
@@ -1885,7 +1901,7 @@ function animate(){
   state.renderer.render(state.scene,state.camera);
 }
 function setupGlobalInput(){
-  document.addEventListener('mousemove',function(e){if(!state.active||!state.camera)return;if(!isLocked())return;applyLook(clampLook(e.movementX),clampLook(e.movementY))});
+  document.addEventListener('mousemove',function(e){if(!state.active||!state.camera)return;if(!isLocked())return;applyLook(e.movementX,e.movementY)});
   document.addEventListener('mousedown',function(e){
     if(!state.active||!state.camera)return;if(!isLocked())return;
     if(e.button!==undefined&&e.button!==0)return;
