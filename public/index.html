@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>AimFinder — Pilih Versi Sens Finder</title>
-<meta name="description" content="Landing page AimFinder. Pilih 10 varian Sens Finder: PSA, Continuous AI, Valorant theme, Calibration Lab, dan prototype.">
+<meta name="description" content="Landing page AimFinder. Pilih 11 varian Sens Finder: PSA, Continuous AI, Valorant theme, Calibration Lab, Western Arena, dan prototype.">
 <meta name="theme-color" content="#0c0c0c">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230c0c0c'/><path d='M8 16 L24 16 M16 8 L16 24' stroke='%23ffb000' stroke-width='2'/><circle cx='16' cy='16' r='7' fill='none' stroke='%23ffb000' stroke-width='1.5'/></svg>">
 <link rel="stylesheet" href="https://cdn.hugeicons.com/font/hgi-stroke-rounded.css">
@@ -146,13 +146,13 @@ footer a:hover{color:var(--amber)}
   <section class="hero">
     <h1 class="hero-title">Pilih versi <span class="grad">AimFinder</span></h1>
     <div class="stat-grid">
-      <div class="stat"><span class="stat-label">Varian</span><span class="stat-value">10</span><span class="stat-sub">file frozen</span></div>
-      <div class="stat"><span class="stat-label">Terbaru</span><span class="stat-value amber">sens.html</span><span class="stat-sub">contrast fix</span></div>
+      <div class="stat"><span class="stat-label">Varian</span><span class="stat-value">11</span><span class="stat-sub">10 frozen + arena</span></div>
+      <div class="stat"><span class="stat-label">Terbaru</span><span class="stat-value amber">arena.html</span><span class="stat-sub">western frontier</span></div>
       <div class="stat"><span class="stat-label">Keluarga</span><span class="stat-value">5</span><span class="stat-sub">PSA / AI / Valo / Lab / Proto</span></div>
       <div class="stat"><span class="stat-label">Live</span><span class="stat-value" style="font-size:15px">wasmer.app</span><span class="stat-sub">aimfinder.wasmer.app</span></div>
     </div>
     <div class="toolbar">
-      <label class="search"><i class="hgi-stroke hgi-search-01"></i><input id="q" type="search" placeholder="Cari: psa, ai, valo, lab, gpt..." autocomplete="off" aria-label="Cari versi"></label>
+      <label class="search"><i class="hgi-stroke hgi-search-01"></i><input id="q" type="search" placeholder="Cari: psa, ai, valo, lab, arena, gpt..." autocomplete="off" aria-label="Cari versi"></label>
       <div class="toggles" id="filters" role="tablist" aria-label="Filter keluarga">
         <button class="tgl active" data-f="all"><span class="tgl-dot"></span>All</button>
         <button class="tgl" data-f="psa"><span class="tgl-dot"></span>PSA</button>
@@ -165,23 +165,34 @@ footer a:hover{color:var(--amber)}
   </section>
 
   <section class="grid" id="grid">
-    <!-- 10 — MVP / TERBARU -->
-    <article class="card mvp" data-tags="lab" data-name="sens calibration lab contrast fix terbaru mvp recommended">
-      <div class="mvp-strip"><i class="hgi-stroke hgi-crown-01"></i><span>MVP — Terbaru dan Direkomendasikan</span><span class="right">10 / logs.txt</span></div>
-      <div class="card-hdr"><i class="hgi-stroke hgi-crown-01"></i><span class="card-file">sens.html</span><span class="card-num">Calibration Lab</span></div>
+    <!-- 11 — MVP / TERBARU -->
+    <article class="card mvp" data-tags="lab" data-name="arena western frontier cowboy medieval range terbaru mvp recommended">
+      <div class="mvp-strip"><i class="hgi-stroke hgi-crown-01"></i><span>MVP — Terbaru dan Direkomendasikan</span><span class="right">11 / arena</span></div>
+      <div class="card-hdr"><i class="hgi-stroke hgi-crown-01"></i><span class="card-file">arena.html</span><span class="card-num">Western Frontier</span></div>
       <div class="card-body">
         <div class="mvp-grid">
           <div class="mvp-side">
-            <div class="badge-row"><span class="badge gold"><i class="hgi-stroke hgi-crown-01"></i>MVP</span><span class="badge">Lab</span></div>
-            <h2>Calibration Lab (contrast fix)</h2>
-            <p>Iterasi terbaru Lab: perbaikan kontras teks (11:1 / 7.5:1 / 5:1). Mulai dari sini, lalu bandingkan dengan finder.html.</p>
-            <div class="meta"><span>1860 lines</span><span>145 KB</span><span>recommended</span></div>
+            <div class="badge-row"><span class="badge gold"><i class="hgi-stroke hgi-crown-01"></i>MVP</span><span class="badge">Lab</span><span class="badge">Arena 3D</span></div>
+            <h2>Western Frontier Range</h2>
+            <p>Ruang 3D bertema kota barat siang lembut: langit biru + awan, tanah dirt + paving, pagar kayu, fasad SALOON / BANK / HOTEL, kincir angin. Koridor tembak tetap steril, 100% prosedural tanpa lib baru.</p>
+            <div class="meta"><span>2037 lines</span><span>160 KB</span><span>recommended</span></div>
           </div>
           <div class="mvp-side">
-            <a class="btn" href="./sens.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka sens.html</a>
+            <a class="btn" href="./arena.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka arena.html</a>
             <a class="btn ghost" href="./docs.html#sens"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a>
           </div>
         </div>
+      </div>
+    </article>
+    <!-- 10 -->
+    <article class="card" data-tags="lab" data-name="sens calibration lab contrast fix recommended">
+      <div class="card-hdr"><i class="hgi-stroke hgi-flask"></i><span class="card-file">sens.html</span><span class="card-num">10 / logs.txt</span></div>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge">Lab</span></div>
+        <h2>Calibration Lab (contrast fix)</h2>
+        <p>Lab amber (#ffb000) dengan perbaikan kontras teks (11:1 / 7.5:1 / 5:1). arena.html adalah fork dari varian ini.</p>
+        <div class="meta"><span>1860 lines</span><span>145 KB</span><span>lab</span></div>
+        <div class="card-actions"><a class="btn" href="./sens.html"><i class="hgi-stroke hgi-arrow-up-right-01"></i>Buka</a><a class="btn ghost" href="./docs.html#sens"><i class="hgi-stroke hgi-book-open-01"></i>Docs</a></div>
       </div>
     </article>
     <!-- 09 -->

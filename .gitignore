@@ -11,3 +11,6 @@ Thumbs.db
 
 # Wasmer
 .wasmer/
+
+# Local backups (tidak di-commit, tidak di-deploy)
+backup/
